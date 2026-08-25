@@ -2,32 +2,38 @@
 
 ## 배치
 
-전 프로세스가 **로봇이 물린 머신(leap)** 에 상주하고, 태블릿만 LAN 으로 붙는다.
-로봇 턴이 46초(실행은 더 길 수 있음)라 그 사이 머신 간 홉이 없어야 하고,
-카메라 프레임이 네트워크를 넘지 않아야 한다.
+태블릿은 **Cloudflare 에 배포된 페이지**를 열고, 허브는 `cloudflared` 터널로 노출한다.
+양쪽 다 밖으로 나가는 연결이라 방화벽·AP격리·LAN IP 를 신경 쓸 일이 없다.
 
 ```
-                     leap 머신 (로봇 · 카메라 3대 · GPU)
-  ┌───────────────────────────────────────────────────────────┐
-  │  우리 venv                        leap venv               │
-  │  ├ orchestrator      :8000        └ robot_bridge  :8081   │
-  │  ├ vlm_service                        (lerobot ·          │
-  │  ├ voice_service (마이크)               openarm_sciedu)    │
-  │  ├ 태블릿 서빙       :4173  (vite — Cloudflare 불필요)     │
-  │  └ 운영자 CLI                                             │
-  └───────────────────────────────────────────────────────────┘
-                              ↑ LAN
-                       안드로이드 태블릿
+      태블릿 (아무 인터넷이나)
+        │  https://openarm-special-web.<계정>.workers.dev/tablet
+        │  wss://xxxx.trycloudflare.com/ws/tablet
+        ↓
+   Cloudflare
+        ↓  cloudflared 터널 (아웃바운드)
+  ┌─────────────────────────────────────────────────────┐
+  │  leap 머신 — 여기 안은 전부 127.0.0.1               │
+  │    orchestrator :8000 ←→ robot_bridge :8081         │
+  │    vlm_service · voice_service · operator_cli       │
+  └─────────────────────────────────────────────────────┘
 ```
 
-**venv 가 둘인 이유**: `robot_bridge` 만 `lerobot`·`openarm_sciedu` 가 필요하다.
-나머지 셋은 순수 파이썬이라 우리 venv 로 충분하고, 그래야 **leap 의 환경을 흔들지 않는다.**
+**로봇 제어와 안전 게이트는 전부 로컬이다.** `robot_cmd` · `robot_done` ·
+`camera_health` · `robot_abort` 는 오케스트레이터와 브릿지 사이에서만 오간다.
+인터넷을 타는 것은 **태블릿의 `state` 와 `advance` 뿐**이다.
 
-**시연 중 외부 의존은 둘뿐이다** — VLM 판정(OpenRouter)과 STT(CLOVA, 선택).
-태블릿 서빙·상태 동기화·페어링은 전부 이 머신 안에서 끝난다. 인터넷이 끊기면 VLM 이
-죽고 운영자 수동 판정으로 강등되지만, **세션 자체는 계속 돈다.**
+인터넷이 끊기면 화면이 멈추고 진행 신호가 끊긴다. 팔이 통제를 벗어나지는 않는다 —
+운영자 CLI 는 로컬이므로 `a`(중단) · `p`(일시정지) · `n`(다음으로) 이 그대로 듣는다.
 
----
+**LAN 직결도 가능하다.** 같은 방·같은 LAN 이면 `npm run serve` 로 태블릿을 띄우고
+`ORCH_HOST=0.0.0.0` 으로 허브를 열면 된다 (왕복 0.3ms vs 터널 14~24ms). 다만 현장
+와이파이의 AP 격리·방화벽을 미리 확인해야 한다. 두 경로 모두 코드 변경이 없으므로
+현장에서 막히면 그 자리에서 바꿀 수 있다.
+
+**시연 중 외부 의존은 셋이다** — 페이지 서빙(Cloudflare) · 허브 터널 · VLM 판정(OpenAI).
+VLM 이 죽으면 운영자 수동 판정으로 강등되고 세션은 돈다. 앞의 둘이 죽으면 화면과
+진행이 멈춘다.
 
 ## 0. 먼저 — 리포에 커밋이 없다
 
@@ -162,11 +168,17 @@ PYTHONPATH=~/specialedu /home/leap/Documents/openarmsciedu/.venv/bin/python -m r
 
 ```bash
 # ⑤ 태블릿 — 이 머신에서 서빙하고 안드로이드는 LAN 으로 붙는다
-cd ../openarm-special-web && npm run serve
+cd ../openarm-special-web && npm run deploy      # 최초 1회, 또는 화면이 바뀌었을 때
 ```
 
 ```bash
-# ⑤ 태블릿을 LAN 에 붙이고 **화면을 한 번 탭한다**  ← 빼먹으면 세션이 멈춘다
+# ⑤ 허브를 터널로 노출한다 — 나오는 주소를 태블릿에 넣는다
+cloudflared tunnel --url http://localhost:8000
+```
+
+```bash
+# ⑥ 태블릿에서 배포된 페이지를 연다
+#    https://openarm-special-web.<계정>.workers.dev/tablet
 ```
 
 태블릿에서 `http://<leap-lan-ip>:4173/tablet` 을 연다. 허브 주소는 페이지를 서빙한
@@ -201,10 +213,15 @@ sudo ufw allow 4173/tcp && sudo ufw allow 8000/tcp             # 방화벽
 > HTTPS 는 필요 없다. 평문 HTTP + `ws://` 라 혼합 콘텐츠 문제가 없고, 태블릿은 마이크를
 > 쓰지 않는다(마이크는 leap). 보안 컨텍스트가 필요한 기능이 하나도 없다.
 
-> **`npm run preview` 를 쓰지 않는 이유.** 그건 `wrangler dev` — Cloudflare 도구다.
-> 태블릿은 이제 Durable Object 를 쓰지 않고 허브에 직결하므로 필요가 없고, 시연 당일
-> Cloudflare 로그인·네트워크라는 변수만 늘린다. `npm run serve`(= `vite dev`)로 같은
-> 화면이 뜨는 것을 e2e 로 확인했다 — 그쪽이 5배 빠르기도 하다(54초 → 10.9초).
+> **태블릿 설치 화면은 두 단계다.** 아동이 아니라 **운영자가** 한다.
+>
+> ① **허브 주소** — 배포판은 페이지(workers.dev)와 허브(로봇 옆 기기)가 다른 곳에
+>    있어 추측할 수 없다. `cloudflared` 가 찍어준 주소를 넣는다. `https://` 로 붙여넣어도
+>    `wss://` 로 바꿔 준다. **한 번 넣으면 브라우저가 기억**하므로 새로고침해도 유지된다.
+>    주소가 바뀌면 "주소 다시 넣기" 를 누른다.
+>
+> ② **화면 한 번 탭** — Chrome 은 사용자 제스처 없이 소리를 막는다. 빼먹으면 첫 발화가
+>    막히고 `advance` 가 안 나가 **세션이 INTRO 에서 멈춘다.**
 >
 > `/operator` 브라우저 페이지는 아직 Durable Object 경로다. **시연에서는 쓰지 않는다** —
 > 운영자 콘솔은 `tools/operator_cli.py` 다.
@@ -242,6 +259,8 @@ sudo ufw allow 4173/tcp && sudo ufw allow 8000/tcp             # 방화벽
 | 팔이 위험하다 | `a` 중단 |
 | 상시 감지가 오작동 | VLM 을 `--no-watch` 로 재기동 → 운영자 버튼만 |
 | 소리가 안 난다 | 설치 탭을 빼먹었다. 새로고침 후 화면을 한 번 누른다 |
+| 태블릿이 안 붙는다 | 터널 주소가 바뀌었다. "주소 다시 넣기" 로 새 주소 |
+| 인터넷이 끊겼다 | 운영자 CLI 의 `n` 으로 진행을 민다. 팔 제어는 영향 없다 |
 | 특정 발화만 무음 | 그 wav 가 없다. `tools/render_lines.py --only <id>` |
 | 카메라 하나가 죽었다 | 새 턴이 자동으로 막힌다. 복구 후 자동 재개 |
 

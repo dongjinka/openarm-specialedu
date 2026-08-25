@@ -12,6 +12,7 @@ VLM 이 아직 없으므로 판정도 사람이 한다 (§5 의 운영자 폴백
     x        오답              d        중복
     v        확인 성공         vf       확인 실패 (물건이 안 들어감)
     p / r    일시정지 / 재개    a        로봇 중단
+    n        다음으로 — 태블릿이 끊겼을 때 진행을 손으로 민다
     q        종료
 """
 
@@ -136,6 +137,12 @@ class Console:
                 await self._send(op, {"type": "resume"})
             case "a":
                 await self._send(op, {"type": "robot_abort", "cmd_id": self.cmd_id})
+            case "n":
+                # 발화가 끝났다는 신호를 사람이 대신 낸다.
+                # 진행은 보통 태블릿이 재생을 마치며 보내는 advance 로 일어난다.
+                # 태블릿이 끊기거나 소리가 막히면 그 신호가 오지 않아 세션이
+                # 그 자리에 선다 — 손으로 밀 수단이 없으면 시연이 멈춘다.
+                await self._send(op, {"type": "advance"})
             case _:
                 print(f"   ? 알 수 없는 명령: {cmd}", flush=True)
 

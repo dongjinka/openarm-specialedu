@@ -21,6 +21,7 @@ from typing import Any
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from pydantic import ValidationError
 
+import openarm_env
 from orchestrator import events as ev
 from orchestrator.effects import (
     Broadcast,
@@ -301,6 +302,7 @@ def main() -> None:
                    help="자동 advance 지연을 일괄 덮어쓴다 (템포 조절)")
     args = p.parse_args()
 
+    openarm_env.load()      # .env — ORCH_HOST · API 키
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     scenario = find_scenario(args.scenario, args.scenario_dir)
     app = create_app(scenario, log_dir=args.log_dir, auto_advance=not args.no_auto_advance,
@@ -308,6 +310,15 @@ def main() -> None:
 
     import uvicorn
 
+    # 루프백에 묶으면 태블릿이 페이지는 열어도 **WebSocket 이 거부된다.**
+    # 화면만 보면 "연결 준비 중..." 에서 멈춘 것처럼 보여 원인을 찾기 어렵다.
+    if args.host in ("127.0.0.1", "localhost", "::1"):
+        logging.warning(
+            "허브가 %s 에만 묶인다 — 같은 기기에서만 붙을 수 있다. "
+            "태블릿을 LAN 으로 붙이려면 .env 에 ORCH_HOST=0.0.0.0 을 넣거나 "
+            "--host 0.0.0.0 을 준다.", args.host)
+    else:
+        logging.info("허브 바인딩 %s:%d — LAN 에서 접속 가능", args.host, args.port)
     uvicorn.run(app, host=args.host, port=args.port, log_level="info")
 
 

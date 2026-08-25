@@ -17,6 +17,8 @@ import pathlib
 
 import websockets
 
+import openarm_env
+
 from robot_bridge.backend import RobotBackend
 from robot_bridge.preflight import check_state
 from robot_bridge.sim import DEFAULT_MS, SimBackend
@@ -156,6 +158,7 @@ def main() -> None:
     p.add_argument("--frame-host", default="127.0.0.1")
     args = p.parse_args()
 
+    openarm_env.load()      # .env — ORCH_HOST · API 키
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     backend = build_backend(args)
     client = BridgeClient(args.url, backend)

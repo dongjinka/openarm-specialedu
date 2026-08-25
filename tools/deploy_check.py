@@ -114,6 +114,41 @@ def main() -> int:
             print(f"  {WARN}STT 없이 돈다. 설치하려면: pip install -e '.[voice]'")
             print(f"  {WARN}Linux 는 먼저: sudo apt install libportaudio2")
 
+    print("\n허브를 태블릿에 어떻게 노출하나")
+    tunnel = shutil.which("cloudflared")
+    print(f"  {OK if tunnel else WARN}cloudflared  "
+          f"{tunnel or '없음 — 배포판(Cloudflare)에서 붙이려면 필요하다'}")
+    if tunnel:
+        print("     cloudflared tunnel --url http://localhost:8000")
+        print("     나온 주소를 태블릿 설치 화면에 넣는다 (한 번 넣으면 기억한다)")
+    else:
+        print("     LAN 직결이라면 아래 주소를 쓴다. 배포판이면 cloudflared 가 필요하다:")
+        print("     https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/")
+
+    print("\n네트워크 — LAN 으로 직접 붙일 때의 주소")
+    import subprocess
+    try:
+        out = subprocess.run(["ip", "-4", "addr", "show", "scope", "global"],
+                             capture_output=True, text=True, timeout=5).stdout
+        ips = [ln.split()[1].split("/")[0] for ln in out.splitlines() if "inet " in ln]
+    except Exception:  # noqa: BLE001
+        ips = []
+    if ips:
+        for ip in ips:
+            print(f"  {OK} http://{ip}:4173/tablet")
+        print(f"  {WARN}허브는 자동으로 ws://<같은 주소>:8000 을 쓴다")
+        print(f"  {WARN}**IP 로 접속한다.** vite 는 모르는 호스트명을 403 으로 막는다")
+    else:
+        problems.append("LAN 주소를 못 찾았다 — 태블릿이 붙을 곳이 없다")
+
+    host = os.environ.get("ORCH_HOST", "127.0.0.1")
+    lan_ok = host not in ("127.0.0.1", "localhost", "::1")
+    print(f"  {OK if lan_ok else BAD} ORCH_HOST={host}")
+    if not lan_ok:
+        problems.append(
+            "ORCH_HOST 가 루프백이다 — 태블릿이 페이지는 열어도 WebSocket 이 거부된다.\n"
+            "     화면은 '연결 준비 중...' 에서 멈춘 것처럼 보인다. .env 에 ORCH_HOST=0.0.0.0")
+
     print("\n포트")
     for port, who in ((8000, "orchestrator 허브"), (8081, "프레임 서버"), (4173, "태블릿")):
         free = port_free(port)
