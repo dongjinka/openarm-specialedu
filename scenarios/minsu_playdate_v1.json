@@ -18,7 +18,7 @@
   ],
   "robot_deadline_ms": 69500,
   "judge_timeout_ms": 15000,
-  "verify_timeout_ms": 10000,
+  "verify_timeout_ms": 20000,
   "objects": {
     "flower": {
       "ko": "꽃 장난감",

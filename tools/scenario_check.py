@@ -26,6 +26,10 @@ import websockets
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+import openarm_env  # noqa: E402
+
+openarm_env.load()
+
 from orchestrator.main import create_app                      # noqa: E402
 from orchestrator.scenario import find_scenario               # noqa: E402
 from robot_bridge.main import BridgeClient                    # noqa: E402

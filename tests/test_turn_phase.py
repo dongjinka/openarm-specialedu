@@ -80,3 +80,18 @@ def test_scenario_without_phases_simply_omits_the_label():
     payload = [e.payload for e in tr.effects if isinstance(e, Broadcast)][0]
     assert "turn_phase" not in payload
     assert "ratio" in payload
+
+
+def test_verify_timeout_outlasts_the_retry_loop():
+    """사후 확인 타임아웃이 재시도 루프보다 길어야 한다.
+
+    가방 입구가 팔에 가리면 vlm_service 가 다시 찍는다. 그 루프가 타임아웃을 넘기면
+    **로봇이 성공해도** ROBOT_FAIL 로 가고 아동에게 "로봇의 실수" 로 안내된다.
+    실측(gpt-4o) 최대 지연 2.63초 기준으로 계산한다.
+    """
+    from vlm_service.main import VERIFY_RETRIES, VERIFY_RETRY_DELAY_S
+
+    worst_call_s = 2.63          # eval/results_60epi_gpt4o.json 의 최대 지연
+    worst_s = (VERIFY_RETRIES + 1) * worst_call_s + VERIFY_RETRIES * VERIFY_RETRY_DELAY_S
+    assert SC.verify_timeout_ms / 1000 > worst_s, (
+        f"재시도 루프 최악 {worst_s:.1f}초 > 타임아웃 {SC.verify_timeout_ms/1000}초")

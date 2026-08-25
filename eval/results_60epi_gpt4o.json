@@ -5,12 +5,12 @@
     "thumb": "thumbs/ep0_t02.jpg",
     "truth": "none",
     "pred": "none",
-    "confidence": 1.0,
-    "reason": "The placement surface is empty or too occluded.",
+    "confidence": 0.95,
+    "reason": "placement surface is empty",
     "should_pack_pred": false,
     "should_pack_truth": false,
     "hold_for_operator": true,
-    "latency_s": 3.645
+    "latency_s": 1.605
   },
   {
     "episode_index": "0",
@@ -19,24 +19,24 @@
     "truth": "whale",
     "pred": "whale",
     "confidence": 0.9,
-    "reason": "Most central object is a light blue, flat toy.",
+    "reason": "Light blue, low and flat shape",
     "should_pack_pred": true,
     "should_pack_truth": true,
     "hold_for_operator": false,
-    "latency_s": 3.406
+    "latency_s": 1.415
   },
   {
     "episode_index": "0",
     "kind": "boundary",
     "thumb": "thumbs/ep0_t06.jpg",
     "truth": "none",
-    "pred": "whale",
+    "pred": "none",
     "confidence": 0.9,
-    "reason": "Most central object on the placement surface.",
-    "should_pack_pred": true,
+    "reason": "Surface is empty; toy is held",
+    "should_pack_pred": false,
     "should_pack_truth": false,
-    "hold_for_operator": false,
-    "latency_s": 3.503
+    "hold_for_operator": true,
+    "latency_s": 1.544
   },
   {
     "episode_index": "0",
@@ -44,25 +44,12 @@
     "thumb": "thumbs/ep0_end6.jpg",
     "truth": "none",
     "pred": "none",
-    "confidence": 1.0,
-    "reason": "Placement surface is empty or too occluded to tell.",
+    "confidence": 0.95,
+    "reason": "placement surface is empty",
     "should_pack_pred": false,
     "should_pack_truth": false,
     "hold_for_operator": true,
-    "latency_s": 1.691
-  },
-  {
-    "episode_index": "0",
-    "kind": "judge",
-    "thumb": "thumbs/ep0_t14.jpg",
-    "truth": "whale",
-    "pred": "whale",
-    "confidence": 0.9,
-    "reason": "Most central object on the placement surface.",
-    "should_pack_pred": true,
-    "should_pack_truth": true,
-    "hold_for_operator": false,
-    "latency_s": 1.936
+    "latency_s": 1.204
   },
   {
     "episode_index": "0",
@@ -71,11 +58,24 @@
     "truth": "whale",
     "pred": "whale",
     "confidence": 0.9,
-    "reason": "Central object is a light blue, low and flat toy.",
+    "reason": "Light blue, low and flat shape visible",
     "should_pack_pred": true,
     "should_pack_truth": true,
     "hold_for_operator": false,
-    "latency_s": 1.921
+    "latency_s": 1.309
+  },
+  {
+    "episode_index": "0",
+    "kind": "judge",
+    "thumb": "thumbs/ep0_t14.jpg",
+    "truth": "whale",
+    "pred": "whale",
+    "confidence": 0.9,
+    "reason": "Light blue, low and flat shape",
+    "should_pack_pred": true,
+    "should_pack_truth": true,
+    "hold_for_operator": false,
+    "latency_s": 1.352
   },
   {
     "episode_index": "0",
@@ -83,12 +83,12 @@
     "thumb": "thumbs/ep0_end2.jpg",
     "truth": "none",
     "pred": "none",
-    "confidence": 1.0,
-    "reason": "Placement surface is empty or too occluded to tell.",
+    "confidence": 0.95,
+    "reason": "placement surface is empty",
     "should_pack_pred": false,
     "should_pack_truth": false,
     "hold_for_operator": true,
-    "latency_s": 1.118
+    "latency_s": 1.52
   },
   {
     "episode_index": "1",
@@ -96,38 +96,38 @@
     "thumb": "thumbs/ep1_t02.jpg",
     "truth": "none",
     "pred": "none",
-    "confidence": 1.0,
-    "reason": "Placement surface is empty or too occluded to tell.",
+    "confidence": 0.9,
+    "reason": "Placement surface appears empty",
     "should_pack_pred": false,
     "should_pack_truth": false,
     "hold_for_operator": true,
-    "latency_s": 1.082
+    "latency_s": 1.572
   },
   {
     "episode_index": "1",
     "kind": "boundary",
     "thumb": "thumbs/ep1_t06.jpg",
     "truth": "none",
-    "pred": "other",
+    "pred": "none",
     "confidence": 0.9,
-    "reason": "A red and green block structure is present.",
+    "reason": "surface is empty, toy in hand",
     "should_pack_pred": false,
     "should_pack_truth": false,
     "hold_for_operator": true,
-    "latency_s": 1.69
+    "latency_s": 1.753
   },
   {
     "episode_index": "1",
     "kind": "judge",
     "thumb": "thumbs/ep1_t10.jpg",
     "truth": "flower",
-    "pred": "other",
+    "pred": "flower",
     "confidence": 0.9,
-    "reason": "Blocks are not identifiable as tree, flower, or whale.",
-    "should_pack_pred": false,
+    "reason": "Red block on green base visible",
+    "should_pack_pred": true,
     "should_pack_truth": true,
-    "hold_for_operator": true,
-    "latency_s": 1.22
+    "hold_for_operator": false,
+    "latency_s": 1.257
   },
   {
     "episode_index": "1",
@@ -136,11 +136,11 @@
     "truth": "flower",
     "pred": "flower",
     "confidence": 0.9,
-    "reason": "Most central object is a red block on green base.",
+    "reason": "Red block on green base visible",
     "should_pack_pred": true,
     "should_pack_truth": true,
     "hold_for_operator": false,
-    "latency_s": 1.416
+    "latency_s": 1.215
   },
   {
     "episode_index": "1",
@@ -149,11 +149,11 @@
     "truth": "flower",
     "pred": "flower",
     "confidence": 0.9,
-    "reason": "Most central object is a red block on green base.",
+    "reason": "Red block on green base visible",
     "should_pack_pred": true,
     "should_pack_truth": true,
     "hold_for_operator": false,
-    "latency_s": 0.958
+    "latency_s": 1.228
   },
   {
     "episode_index": "1",
@@ -161,12 +161,12 @@
     "thumb": "thumbs/ep1_end6.jpg",
     "truth": "none",
     "pred": "none",
-    "confidence": 0.9,
-    "reason": "Surface is mostly occluded by robot arms and backpack.",
+    "confidence": 0.95,
+    "reason": "The placement surface is empty",
     "should_pack_pred": false,
     "should_pack_truth": false,
     "hold_for_operator": true,
-    "latency_s": 1.026
+    "latency_s": 1.249
   },
   {
     "episode_index": "1",
@@ -174,12 +174,12 @@
     "thumb": "thumbs/ep1_end2.jpg",
     "truth": "none",
     "pred": "none",
-    "confidence": 1.0,
-    "reason": "Placement surface is empty or too occluded to tell.",
+    "confidence": 0.95,
+    "reason": "The placement surface is empty",
     "should_pack_pred": false,
     "should_pack_truth": false,
     "hold_for_operator": true,
-    "latency_s": 1.385
+    "latency_s": 1.235
   },
   {
     "episode_index": "2",
@@ -187,38 +187,12 @@
     "thumb": "thumbs/ep2_t02.jpg",
     "truth": "none",
     "pred": "none",
-    "confidence": 1.0,
-    "reason": "Placement surface is empty or too occluded to tell.",
+    "confidence": 0.95,
+    "reason": "The placement surface is empty",
     "should_pack_pred": false,
     "should_pack_truth": false,
     "hold_for_operator": true,
-    "latency_s": 1.047
-  },
-  {
-    "episode_index": "2",
-    "kind": "boundary",
-    "thumb": "thumbs/ep2_t06.jpg",
-    "truth": "none",
-    "pred": "none",
-    "confidence": 0.9,
-    "reason": "Gripper occludes view of the placement surface.",
-    "should_pack_pred": false,
-    "should_pack_truth": false,
-    "hold_for_operator": true,
-    "latency_s": 1.158
-  },
-  {
-    "episode_index": "2",
-    "kind": "judge",
-    "thumb": "thumbs/ep2_t14.jpg",
-    "truth": "tree",
-    "pred": "tree",
-    "confidence": 0.9,
-    "reason": "Green leafy block on a tan cylindrical trunk.",
-    "should_pack_pred": true,
-    "should_pack_truth": true,
-    "hold_for_operator": false,
-    "latency_s": 1.0
+    "latency_s": 1.177
   },
   {
     "episode_index": "2",
@@ -227,37 +201,37 @@
     "truth": "tree",
     "pred": "tree",
     "confidence": 0.9,
-    "reason": "Green leafy block on a tan cylindrical trunk",
+    "reason": "Green leafy block on tan trunk visible",
     "should_pack_pred": true,
     "should_pack_truth": true,
     "hold_for_operator": false,
-    "latency_s": 1.696
+    "latency_s": 1.184
   },
   {
     "episode_index": "2",
     "kind": "judge",
-    "thumb": "thumbs/ep2_t18.jpg",
+    "thumb": "thumbs/ep2_t14.jpg",
     "truth": "tree",
-    "pred": "other",
+    "pred": "tree",
     "confidence": 0.9,
-    "reason": "Green block not identifiable as tree, flower, or whale.",
-    "should_pack_pred": false,
+    "reason": "Green leafy block on tan trunk",
+    "should_pack_pred": true,
     "should_pack_truth": true,
-    "hold_for_operator": true,
-    "latency_s": 1.246
+    "hold_for_operator": false,
+    "latency_s": 1.175
   },
   {
     "episode_index": "2",
-    "kind": "verify",
-    "thumb": "thumbs/ep2_end6.jpg",
+    "kind": "boundary",
+    "thumb": "thumbs/ep2_t06.jpg",
     "truth": "none",
     "pred": "none",
-    "confidence": 1.0,
-    "reason": "Placement surface is empty or too occluded to tell.",
+    "confidence": 0.95,
+    "reason": "Surface is empty, toy is held",
     "should_pack_pred": false,
     "should_pack_truth": false,
     "hold_for_operator": true,
-    "latency_s": 1.127
+    "latency_s": 1.485
   },
   {
     "episode_index": "2",
@@ -265,12 +239,38 @@
     "thumb": "thumbs/ep2_end2.jpg",
     "truth": "none",
     "pred": "none",
-    "confidence": 1.0,
-    "reason": "The placement surface is empty or too occluded.",
+    "confidence": 0.95,
+    "reason": "The placement surface is empty",
     "should_pack_pred": false,
     "should_pack_truth": false,
     "hold_for_operator": true,
-    "latency_s": 1.485
+    "latency_s": 1.238
+  },
+  {
+    "episode_index": "2",
+    "kind": "verify",
+    "thumb": "thumbs/ep2_end6.jpg",
+    "truth": "none",
+    "pred": "none",
+    "confidence": 0.95,
+    "reason": "The placement surface is empty",
+    "should_pack_pred": false,
+    "should_pack_truth": false,
+    "hold_for_operator": true,
+    "latency_s": 1.365
+  },
+  {
+    "episode_index": "2",
+    "kind": "judge",
+    "thumb": "thumbs/ep2_t18.jpg",
+    "truth": "tree",
+    "pred": "tree",
+    "confidence": 0.9,
+    "reason": "Green leafy block on tan trunk visible",
+    "should_pack_pred": true,
+    "should_pack_truth": true,
+    "hold_for_operator": false,
+    "latency_s": 1.642
   },
   {
     "episode_index": "3",
@@ -278,51 +278,12 @@
     "thumb": "thumbs/ep3_t02.jpg",
     "truth": "none",
     "pred": "none",
-    "confidence": 1.0,
-    "reason": "Placement surface is empty or too occluded to tell.",
+    "confidence": 0.9,
+    "reason": "placement surface is empty",
     "should_pack_pred": false,
     "should_pack_truth": false,
     "hold_for_operator": true,
-    "latency_s": 1.464
-  },
-  {
-    "episode_index": "3",
-    "kind": "boundary",
-    "thumb": "thumbs/ep3_t06.jpg",
-    "truth": "none",
-    "pred": "none",
-    "confidence": 1.0,
-    "reason": "Placement surface is empty or too occluded to tell.",
-    "should_pack_pred": false,
-    "should_pack_truth": false,
-    "hold_for_operator": true,
-    "latency_s": 1.237
-  },
-  {
-    "episode_index": "3",
-    "kind": "judge",
-    "thumb": "thumbs/ep3_t18.jpg",
-    "truth": "whale",
-    "pred": "whale",
-    "confidence": 0.9,
-    "reason": "Most central object on the placement surface.",
-    "should_pack_pred": true,
-    "should_pack_truth": true,
-    "hold_for_operator": false,
-    "latency_s": 1.031
-  },
-  {
-    "episode_index": "3",
-    "kind": "judge",
-    "thumb": "thumbs/ep3_t14.jpg",
-    "truth": "whale",
-    "pred": "whale",
-    "confidence": 0.9,
-    "reason": "Most central object is a light blue, flat toy.",
-    "should_pack_pred": true,
-    "should_pack_truth": true,
-    "hold_for_operator": false,
-    "latency_s": 1.238
+    "latency_s": 1.131
   },
   {
     "episode_index": "3",
@@ -331,11 +292,37 @@
     "truth": "whale",
     "pred": "whale",
     "confidence": 0.9,
-    "reason": "Most central object on the placement surface.",
+    "reason": "Light blue, low and flat shape",
     "should_pack_pred": true,
     "should_pack_truth": true,
     "hold_for_operator": false,
-    "latency_s": 1.525
+    "latency_s": 1.32
+  },
+  {
+    "episode_index": "3",
+    "kind": "boundary",
+    "thumb": "thumbs/ep3_t06.jpg",
+    "truth": "none",
+    "pred": "none",
+    "confidence": 1.0,
+    "reason": "placement surface is empty",
+    "should_pack_pred": false,
+    "should_pack_truth": false,
+    "hold_for_operator": true,
+    "latency_s": 1.756
+  },
+  {
+    "episode_index": "3",
+    "kind": "judge",
+    "thumb": "thumbs/ep3_t18.jpg",
+    "truth": "whale",
+    "pred": "whale",
+    "confidence": 0.9,
+    "reason": "Light blue, low and flat shape",
+    "should_pack_pred": true,
+    "should_pack_truth": true,
+    "hold_for_operator": false,
+    "latency_s": 1.108
   },
   {
     "episode_index": "3",
@@ -343,12 +330,25 @@
     "thumb": "thumbs/ep3_end6.jpg",
     "truth": "none",
     "pred": "none",
-    "confidence": 1.0,
-    "reason": "Placement surface is empty or too occluded to tell.",
+    "confidence": 0.95,
+    "reason": "The placement surface is empty",
     "should_pack_pred": false,
     "should_pack_truth": false,
     "hold_for_operator": true,
-    "latency_s": 1.401
+    "latency_s": 1.253
+  },
+  {
+    "episode_index": "3",
+    "kind": "judge",
+    "thumb": "thumbs/ep3_t14.jpg",
+    "truth": "whale",
+    "pred": "whale",
+    "confidence": 0.9,
+    "reason": "Light blue, low and flat shape visible",
+    "should_pack_pred": true,
+    "should_pack_truth": true,
+    "hold_for_operator": false,
+    "latency_s": 2.634
   },
   {
     "episode_index": "3",
@@ -356,12 +356,12 @@
     "thumb": "thumbs/ep3_end2.jpg",
     "truth": "none",
     "pred": "none",
-    "confidence": 1.0,
-    "reason": "Placement surface is empty or too occluded to tell.",
+    "confidence": 0.95,
+    "reason": "The placement surface is empty",
     "should_pack_pred": false,
     "should_pack_truth": false,
     "hold_for_operator": true,
-    "latency_s": 1.858
+    "latency_s": 1.386
   },
   {
     "episode_index": "4",
@@ -369,38 +369,38 @@
     "thumb": "thumbs/ep4_t02.jpg",
     "truth": "none",
     "pred": "none",
-    "confidence": 1.0,
-    "reason": "Placement surface is empty or too occluded to tell.",
+    "confidence": 0.9,
+    "reason": "placement surface is empty",
     "should_pack_pred": false,
     "should_pack_truth": false,
     "hold_for_operator": true,
-    "latency_s": 1.508
+    "latency_s": 1.268
   },
   {
     "episode_index": "4",
     "kind": "boundary",
     "thumb": "thumbs/ep4_t06.jpg",
     "truth": "none",
-    "pred": "flower",
+    "pred": "other",
     "confidence": 0.9,
-    "reason": "Most central object is a red flower block.",
-    "should_pack_pred": true,
+    "reason": "Red and green block, not a flower",
+    "should_pack_pred": false,
     "should_pack_truth": false,
-    "hold_for_operator": false,
-    "latency_s": 1.545
+    "hold_for_operator": true,
+    "latency_s": 1.155
   },
   {
     "episode_index": "4",
     "kind": "judge",
     "thumb": "thumbs/ep4_t10.jpg",
     "truth": "flower",
-    "pred": "other",
+    "pred": "flower",
     "confidence": 0.9,
-    "reason": "Two blocks, not identifiable as tree, flower, or whale.",
-    "should_pack_pred": false,
+    "reason": "Red block on green base visible",
+    "should_pack_pred": true,
     "should_pack_truth": true,
-    "hold_for_operator": true,
-    "latency_s": 1.332
+    "hold_for_operator": false,
+    "latency_s": 1.155
   },
   {
     "episode_index": "4",
@@ -409,11 +409,24 @@
     "truth": "flower",
     "pred": "flower",
     "confidence": 0.9,
-    "reason": "Most central object is a red block on green base.",
+    "reason": "Red block on green base visible",
     "should_pack_pred": true,
     "should_pack_truth": true,
     "hold_for_operator": false,
-    "latency_s": 1.089
+    "latency_s": 1.135
+  },
+  {
+    "episode_index": "4",
+    "kind": "verify",
+    "thumb": "thumbs/ep4_end6.jpg",
+    "truth": "none",
+    "pred": "none",
+    "confidence": 0.95,
+    "reason": "placement surface is empty",
+    "should_pack_pred": false,
+    "should_pack_truth": false,
+    "hold_for_operator": true,
+    "latency_s": 0.94
   },
   {
     "episode_index": "4",
@@ -422,24 +435,11 @@
     "truth": "flower",
     "pred": "flower",
     "confidence": 0.9,
-    "reason": "Most central object is a red block on green base.",
+    "reason": "Red block on green base visible",
     "should_pack_pred": true,
     "should_pack_truth": true,
     "hold_for_operator": false,
-    "latency_s": 1.053
-  },
-  {
-    "episode_index": "4",
-    "kind": "verify",
-    "thumb": "thumbs/ep4_end6.jpg",
-    "truth": "none",
-    "pred": "none",
-    "confidence": 1.0,
-    "reason": "Placement surface is mostly occluded by the backpack.",
-    "should_pack_pred": false,
-    "should_pack_truth": false,
-    "hold_for_operator": true,
-    "latency_s": 1.09
+    "latency_s": 1.226
   },
   {
     "episode_index": "4",
@@ -447,11 +447,11 @@
     "thumb": "thumbs/ep4_end2.jpg",
     "truth": "none",
     "pred": "none",
-    "confidence": 1.0,
-    "reason": "Placement surface is empty or too occluded to tell.",
+    "confidence": 0.95,
+    "reason": "placement surface is empty",
     "should_pack_pred": false,
     "should_pack_truth": false,
     "hold_for_operator": true,
-    "latency_s": 1.077
+    "latency_s": 1.5
   }
 ]

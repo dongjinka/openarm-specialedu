@@ -46,7 +46,12 @@ class Scenario:
     robot_deadline_ms: int = 69_500
     #: 판정 지연 실측 중앙 3.6초 · 최대 14.1초 (gemini-3.7-flash, 320px).
     judge_timeout_ms: int = 15_000
-    verify_timeout_ms: int = 10_000
+    #: 사후 확인 타임아웃. **재시도 루프보다 길어야 한다.**
+    #: 가방 입구가 팔에 가리면 vlm_service 가 최대 3회 다시 찍는다
+    #: (VERIFY_RETRIES=2). 실측 최대 지연 2.63초 × 3회 + 대기 1.2초 × 2 = 10.3초라
+    #: 10초로는 모자란다 — 로봇이 성공해도 타임아웃이 나서 ROBOT_FAIL 로 가고,
+    #: 아동에게 "로봇의 실수" 로 안내된다.
+    verify_timeout_ms: int = 20_000
     #: WAIT_CHILD 에서 이만큼 아무 변화가 없으면 촉진 발화를 다시 낸다 (§C-3).
     stall_timeout_ms: int = 20_000
     #: 로봇 턴의 하위 단계. (진행비율 상한, 단계 id) 오름차순.
@@ -110,7 +115,7 @@ def load_scenario(path: str | Path) -> Scenario:
         strict_order=bool(data.get("strict_order", False)),
         robot_deadline_ms=int(data.get("robot_deadline_ms", 69_500)),
         judge_timeout_ms=int(data.get("judge_timeout_ms", 15_000)),
-        verify_timeout_ms=int(data.get("verify_timeout_ms", 10_000)),
+        verify_timeout_ms=int(data.get("verify_timeout_ms", 20_000)),
         stall_timeout_ms=int(data.get("stall_timeout_ms", 20_000)),
         turn_phases=tuple(
             (float(x["until"]), str(x["id"])) for x in data.get("turn_phases", ())

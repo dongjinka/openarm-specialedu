@@ -16,8 +16,12 @@ import httpx
 
 from vlm_service.backends.base import data_url
 
-#: 비전을 받는 저지연 모델. 실측 후 필요하면 OPENAI_MODEL 로 바꾼다.
-DEFAULT_MODEL = "gpt-4o-mini"
+#: 실측으로 고른 값 (eval/labels_60epi.csv, 2026-08-25):
+#:   gpt-4o       판정 20/20 · 사후확인 10/10 · 지연 중앙 1.26초
+#:   gpt-4o-mini  판정 17/20 — 두 부분으로 겹쳐진 물체(flower·tree)를 `other` 로 본다
+#: mini 의 오답은 로봇이 안 움직이는 안전한 방향이지만, 아동의 정답이 15% 확률로
+#: 보류돼 운영자를 부른다. 그건 "사람 개입 없이" 라는 태스크 조건을 깬다.
+DEFAULT_MODEL = "gpt-4o"
 
 
 class OpenAIBackend:

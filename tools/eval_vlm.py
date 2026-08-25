@@ -26,6 +26,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+import openarm_env  # noqa: E402
+
+openarm_env.load()
+
 from vlm_service.backends import make_backend           # noqa: E402
 from vlm_service.contract import ObjectClass, decide    # noqa: E402
 from vlm_service.service import JudgeService            # noqa: E402
