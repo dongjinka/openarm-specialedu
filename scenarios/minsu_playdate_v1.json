@@ -16,7 +16,7 @@
     "hint",
     "model"
   ],
-  "robot_deadline_ms": 69500,
+  "robot_deadline_ms": 150000,
   "judge_timeout_ms": 15000,
   "verify_timeout_ms": 20000,
   "objects": {
