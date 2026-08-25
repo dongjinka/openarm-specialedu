@@ -364,11 +364,13 @@ class GrootBackend:
 
     def __init__(self, policy_path: str, device: str = "cuda", *, robot_cfg=None,
                  fps: float = 30.0, chunk_size: int | None = None,
-                 n_action_steps: int | None = 6) -> None:
+                 n_action_steps: int | None = 6,
+                 stock_strategy: bool = False) -> None:
         self.policy_path = policy_path
         self.device = device
         self.chunk_size = chunk_size
         self.n_action_steps = n_action_steps
+        self.stock_strategy = stock_strategy
         self.robot_cfg = robot_cfg
         self.fps = fps
         #: 우리가 소유한다 — abort · pause · camera_health 가 지나가는 유일한 통로.
@@ -490,7 +492,21 @@ class GrootBackend:
         )
         logger.info("롤아웃 컨텍스트 구성 (policy=%s, task=%r)", self.policy_path, GROOT_TASK)
         self.ctx = build_rollout_context(cfg, self.shutdown)
-        self.strategy = _build_strategy_class()(cfg.strategy)
+        if self.stock_strategy:
+            # 순정 `BaseStrategy`. 같은 하드웨어·같은 체크포인트로 도는
+            # openarm-special-backend 가 `create_strategy(cfg.strategy)` 로 이렇게
+            # 쓰고, 그쪽은 추론이 잘 된다. 우리 서브클래스가 매 틱 `_log_telemetry`
+            # 에 끼어드는 것이 원인인지 가르기 위한 경로다.
+            #
+            # 대가가 크다 — **동작 중 봉투 검사와 완료 감지가 둘 다 사라진다.**
+            # 봉투 위반이 나도 못 세우고, 턴은 deadline 을 다 채운다. 원인 규명용
+            # 이지 시연용이 아니다.
+            from lerobot.rollout.strategies.factory import create_strategy
+
+            self.strategy = create_strategy(cfg.strategy)
+            logger.warning("순정 BaseStrategy 로 돈다 — 동작 중 봉투 검사·완료 감지 없음 (원인 규명용)")
+        else:
+            self.strategy = _build_strategy_class()(cfg.strategy)
         self.strategy.setup(self.ctx)           # 추론 엔진 생성 + 워밍업
         self.error = None
         logger.info("GR00T 준비 완료")
@@ -558,10 +574,25 @@ class GrootBackend:
 
         violations: list[str] = []
         completed: list[bool] = []
-        self.strategy.bind(asyncio.get_running_loop(), on_progress,
-                           violations.append, lambda: completed.append(True))
+        if not self.stock_strategy:
+            self.strategy.bind(asyncio.get_running_loop(), on_progress,
+                               violations.append, lambda: completed.append(True))
 
         started = time.monotonic()
+        deadline_task: asyncio.Task | None = None
+        if self.stock_strategy:
+            # 순정 전략에는 `duration` 을 주지 않고(=0), 데드라인을 **밖에서** 건다.
+            # openarm-special-backend 가 그렇게 한다. 루프 안에서 자체 종료하는 것과
+            # 밖에서 shutdown_event 로 세우는 것의 차이를 가르기 위한 경로다.
+            self.ctx.runtime.cfg.duration = 0.0
+
+            async def _deadline() -> None:
+                await asyncio.sleep(deadline_ms / 1000.0)
+                logger.warning("데드라인 %.0f초 — 밖에서 정지시킨다", deadline_ms / 1000.0)
+                self.shutdown.set()
+
+            deadline_task = asyncio.create_task(_deadline())
+
         try:
             await asyncio.to_thread(self.strategy.run, self.ctx)
         except Exception as exc:  # noqa: BLE001
@@ -569,6 +600,9 @@ class GrootBackend:
             logger.exception("롤아웃 실행 중 예외")
             await self._recover_to_home(f"{type(exc).__name__}: {exc}")
             return RobotOutcome(False, "aborted", elapsed_ms, f"{type(exc).__name__}: {exc}")
+        finally:
+            if deadline_task is not None:
+                deadline_task.cancel()
         elapsed_ms = int((time.monotonic() - started) * 1000)
 
         if violations:

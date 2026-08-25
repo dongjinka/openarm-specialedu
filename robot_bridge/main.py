@@ -205,7 +205,8 @@ def build_backend(args) -> RobotBackend:
         return GrootBackend(args.policy_path, args.device,
                             robot_cfg=load_robot_config(args.robot_config), fps=args.fps,
                             chunk_size=args.chunk_size,
-                            n_action_steps=args.n_action_steps)
+                            n_action_steps=args.n_action_steps,
+                            stock_strategy=args.stock_strategy)
     return SimBackend(frames_dir=args.frames_dir, duration_ms=args.sim_ms,
                       realistic=args.realistic, fail_rate=args.fail_rate, seed=args.seed)
 
@@ -235,6 +236,9 @@ def main() -> None:
                    help="예측한 것 중 몇 개를 실행하고 다시 관측할지(개루프 구간). "
                         "체크포인트 기본은 40이라 1.33초를 눈 감고 간다 — 물체 앞에서 "
                         "그리퍼가 안 닫히던 원인. 0 이하를 주면 체크포인트 값을 쓴다")
+    p.add_argument("--stock-strategy", action="store_true",
+                   help="순정 BaseStrategy 로 돌고 데드라인을 밖에서 건다 — 잘 도는 팀원 구현과\n"
+                        "같은 경로. **동작 중 봉투 검사와 완료 감지가 사라진다.** 원인 규명용")
     p.add_argument("--device", default="cuda")
     p.add_argument("--frames-dir", default=None,
                    help="--sim 에서 /frame/latest 로 내보낼 이미지 디렉터리 (전 구간 리허설용)")
