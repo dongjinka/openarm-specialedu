@@ -314,10 +314,45 @@ def _build_strategy_class():
             # ② progress_tick — 무발화 구간의 유일한 진행 신호.
             if elapsed - self._last_tick >= PROGRESS_INTERVAL_S:
                 self._last_tick = elapsed
+                # ②-b 그리퍼 진단. **정책이 무엇을 명령했는지**와 팔이 실제로 어디
+                # 있는지를 같이 남긴다. 이 둘이 갈라져야만 알 수 있는 것이 있다:
+                #   명령이 안 닫힘 → 정책이 잡으려 하지 않는다 (관측·분포 문제)
+                #   명령은 닫힘, 실측이 안 따라감 → 구동 문제 (강성·매핑·기구)
+                # 로그에 이 값이 없어서 "물체 앞에서 안 잡는다" 를 두 원인 중 어느
+                # 쪽으로도 확정하지 못했다. 1초에 한 줄이라 루프에 부담이 없다.
+                self._log_grippers(action_dict, state)
                 # 제어 스레드에서 이벤트 루프로 넘긴다. 여기서는 await 할 수 없다.
                 asyncio.run_coroutine_threadsafe(
                     self._on_progress(int(elapsed * 1000)), self._loop
                 )
+
+        @staticmethod
+        def _log_grippers(action_dict, state) -> None:
+            """명령 vs 실측 그리퍼. 진단이 실패해도 제어 루프를 죽이지 않는다."""
+            try:
+                cmd = {}
+                if isinstance(action_dict, dict):
+                    for side in ("left", "right"):
+                        v = action_dict.get(f"{side}_gripper.pos")
+                        if v is not None:
+                            cmd[side] = float(v)
+                meas = {}
+                if state is not None:
+                    meas["left"] = state[STATE_KEYS.index("left_gripper.pos")]
+                    meas["right"] = state[STATE_KEYS.index("right_gripper.pos")]
+                if cmd or meas:
+                    logger.info(
+                        "그리퍼 명령/실측 (도) — 좌 %s/%s · 우 %s/%s",
+                        f"{cmd['left']:.1f}" if "left" in cmd else "?",
+                        f"{meas['left']:.1f}" if "left" in meas else "?",
+                        f"{cmd['right']:.1f}" if "right" in cmd else "?",
+                        f"{meas['right']:.1f}" if "right" in meas else "?",
+                    )
+                elif isinstance(action_dict, dict):
+                    logger.info("그리퍼 명령 키를 못 찾았다 — 액션 키: %s",
+                                sorted(action_dict)[:8])
+            except Exception:  # noqa: BLE001 — 진단이 팔을 멈추게 하면 안 된다
+                logger.debug("그리퍼 진단 실패", exc_info=True)
 
     return OpenArmStrategy
 
