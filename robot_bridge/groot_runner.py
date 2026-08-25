@@ -291,6 +291,8 @@ class GrootBackend:
             rename_map={},                      # 전처리기가 camera1/2/3 리네임을 이미 한다
             return_to_initial_position=True,    # teardown 에서만 동작
             display_data=False,
+            play_sounds=False,                  # 헤드리스라 오디오 장치가 없다. 기본값 True 로
+                                                #    두면 재생 시도가 지연/경고를 만든다
             device=self.device,
         )
         logger.info("롤아웃 컨텍스트 구성 (policy=%s, task=%r)", self.policy_path, GROOT_TASK)

@@ -55,35 +55,35 @@
     },
     "request_flower": {
       "parts": [
-        "꽃 장난감을 챙겨 보자! 책상 위에 올려줄래?"
+        "꽃을 챙겨볼까? 찾아서 책상 위에 올려줘."
       ],
       "files": [
         "lego-flower-request"
       ],
       "source": [
-        "human"
+        "tts"
       ]
     },
     "request_whale": {
       "parts": [
-        "고래 장난감을 챙겨 보자! 책상 위에 올려줄래?"
+        "고래를 챙겨볼까? 찾아서 책상 위에 올려줘."
       ],
       "files": [
         "lego-whale-request"
       ],
       "source": [
-        "human"
+        "tts"
       ]
     },
     "request_tree": {
       "parts": [
-        "나무 장난감을 챙겨 보자! 책상 위에 올려줄래?"
+        "나무를 챙겨볼까? 찾아서 책상 위에 올려줘."
       ],
       "files": [
         "lego-tree-request"
       ],
       "source": [
-        "human"
+        "tts"
       ]
     },
     "hint_flower_color": {
