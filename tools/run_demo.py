@@ -172,24 +172,52 @@ class Service:
         print(self.tail(20))
         die(f"{self.name} 준비 확인 실패 ({timeout:.0f}초 안에 '{needle}' 안 나옴)")
 
-    def stop(self, grace: float = 8.0) -> None:
+    def stop(self, grace: float = 8.0, *, nudge: bool = False) -> None:
         if not self.alive():
             return
         info(f"{self.name} 종료 요청 (pid={self.proc.pid})")
         try:
             self.proc.terminate()
+            if nudge:
+                poke_control_loop()
             self.proc.wait(timeout=grace)
             ok(f"{self.name} 정상 종료")
         except subprocess.TimeoutExpired:
-            # robot_bridge 는 **유휴 상태에서 SIGTERM 을 못 받는다** — 정지 신호를
-            # 활성 제어 루프 안에서만 폴링하기 때문이다. Damiao 모터는 마지막 명령을
-            # 계속 붙들고 있어서 프로세스가 죽어도 팔에서 갑자기 힘이 빠지지는 않는다.
+            # 여기까지 왔다는 것은 정지 신호가 처리되지 않았다는 뜻이다.
+            # SIGKILL 은 하강(descend_to_rest)을 건너뛴다 — 다만 Damiao 모터는
+            # 마지막 MIT 명령을 계속 붙들고 있어서 팔에서 갑자기 힘이 빠지지는 않는다.
+            # 그래도 토크가 걸린 채 남으므로 사람이 확인해야 한다.
             warn(f"{self.name} 이 SIGTERM 에 응답하지 않는다 — SIGKILL")
+            warn("  팔이 토크가 걸린 채 그 자리에 멈춰 있을 수 있다. 눈으로 확인할 것.")
             self.proc.kill()
             self.proc.wait(timeout=5)
         finally:
             if self._fh:
                 self._fh.close()
+
+
+def poke_control_loop(tries: int = 12) -> None:
+    """유휴 상태의 robot_bridge 가 정지 신호를 처리하도록 깨운다.
+
+    `ArmSession` 은 SIGINT/SIGTERM 을 **플래그로만** 받아 두고(핸들러 안에서
+    CAN 을 만지면 재진입이 된다), `raise_if_stopping()` 이 그 플래그를 예외로
+    바꾼다. 그런데 그것을 부르는 곳은 `get_observation()` 과 `send_action()`
+    둘뿐이다 — 즉 **제어 루프가 돌고 있을 때만** 정지가 처리된다.
+
+    턴과 턴 사이(아이에게 다음 물건을 말하는 구간 등)에는 아무도 그 둘을 부르지
+    않아서 종료 신호가 대기열에 걸린 채 남는다. 프레임 서버의 `/frame/latest` 가
+    `latest_frame() → robot_wrapper.get_observation() → inner.get_observation()`
+    을 지나므로, HTTP 요청 한 번이 그 경로를 깨운다.
+
+    팔을 움직이지 않는다는 점이 중요하다 — 트리비얼한 `robot_cmd` 를 보내
+    루프에 진입시키는 방법도 있지만 그것은 실제 동작을 한 번 더 태운다.
+    """
+    for _ in range(tries):
+        try:
+            urllib.request.urlopen("http://127.0.0.1:8081/frame/latest", timeout=1).read()
+        except Exception:  # noqa: BLE001 — 500·연결거부 다 정상 경로다
+            pass
+        time.sleep(0.4)
 
 
 # ────────────────────────────────────────────────── 기동 단계
@@ -303,10 +331,12 @@ def main() -> None:
     def shutdown(*_):
         print()
         print(c("  ── 종료 ──", "1"))
-        # 역순. robot_bridge 는 teardown(하드웨어 disconnect + 초기 자세 복귀)이 있어
-        # 시간을 넉넉히 준다.
+        # 역순. robot_bridge 는 정지 뒤에 할 일이 길다 —
+        #   초기 자세 복귀(약 3초) → 하강 descend_to_rest(약 4초) → 토크 해제 → disconnect.
+        # 게다가 유휴 상태면 정지 신호 자체가 처리되지 않으므로 프레임 서버를 찔러 깨운다.
         for s in reversed(services):
-            s.stop(grace=20.0 if s.name == "robot_bridge" else 8.0)
+            is_rb = s.name == "robot_bridge"
+            s.stop(grace=40.0 if is_rb else 8.0, nudge=is_rb)
         print()
         raise SystemExit(0)
 
