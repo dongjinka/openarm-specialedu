@@ -1,0 +1,36 @@
+episode_index,t_s,object,kind,thumb,notes
+0,2.0,none,judge,thumbs/ep0_t02.jpg,에피소드 시작 · 배치면이 비었다
+0,6.0,none,boundary,thumbs/ep0_t06.jpg,손이 물체를 놓는 중 · §C 안정성 게이트가 걸러낼 구간
+0,10.0,whale,judge,thumbs/ep0_t10.jpg,물건이 책상 위에 있다
+0,14.0,whale,judge,thumbs/ep0_t14.jpg,물건이 책상 위에 있다 · 팔이 프레임에 들어옴
+0,18.0,whale,judge,thumbs/ep0_t18.jpg,물건이 책상 위에 있다 · 팔이 프레임에 들어옴
+0,54.5,none,verify,thumbs/ep0_end6.jpg,로봇이 담은 뒤 · 배치면이 비어야 한다
+0,58.5,none,verify,thumbs/ep0_end2.jpg,로봇이 담은 뒤 · 배치면이 비어야 한다
+1,62.5,none,judge,thumbs/ep1_t02.jpg,에피소드 시작 · 배치면이 비었다
+1,66.5,none,boundary,thumbs/ep1_t06.jpg,손이 물체를 놓는 중 · §C 안정성 게이트가 걸러낼 구간
+1,70.5,flower,judge,thumbs/ep1_t10.jpg,물건이 책상 위에 있다
+1,74.5,flower,judge,thumbs/ep1_t14.jpg,물건이 책상 위에 있다 · 팔이 프레임에 들어옴
+1,78.5,flower,judge,thumbs/ep1_t18.jpg,물건이 책상 위에 있다 · 팔이 프레임에 들어옴
+1,107.567,none,verify,thumbs/ep1_end6.jpg,로봇이 담은 뒤 · 배치면이 비어야 한다
+1,111.567,none,verify,thumbs/ep1_end2.jpg,로봇이 담은 뒤 · 배치면이 비어야 한다
+2,115.567,none,judge,thumbs/ep2_t02.jpg,에피소드 시작 · 배치면이 비었다
+2,119.567,none,boundary,thumbs/ep2_t06.jpg,손이 물체를 놓는 중 · §C 안정성 게이트가 걸러낼 구간
+2,123.567,tree,judge,thumbs/ep2_t10.jpg,물건이 책상 위에 있다
+2,127.567,tree,judge,thumbs/ep2_t14.jpg,물건이 책상 위에 있다 · 팔이 프레임에 들어옴
+2,131.567,tree,judge,thumbs/ep2_t18.jpg,물건이 책상 위에 있다 · 팔이 프레임에 들어옴
+2,160.633,none,verify,thumbs/ep2_end6.jpg,로봇이 담은 뒤 · 배치면이 비어야 한다
+2,164.633,none,verify,thumbs/ep2_end2.jpg,로봇이 담은 뒤 · 배치면이 비어야 한다
+3,168.633,none,judge,thumbs/ep3_t02.jpg,에피소드 시작 · 배치면이 비었다
+3,172.633,none,boundary,thumbs/ep3_t06.jpg,손이 물체를 놓는 중 · §C 안정성 게이트가 걸러낼 구간
+3,176.633,whale,judge,thumbs/ep3_t10.jpg,물건이 책상 위에 있다
+3,180.633,whale,judge,thumbs/ep3_t14.jpg,물건이 책상 위에 있다 · 팔이 프레임에 들어옴
+3,184.633,whale,judge,thumbs/ep3_t18.jpg,물건이 책상 위에 있다 · 팔이 프레임에 들어옴
+3,207.267,none,verify,thumbs/ep3_end6.jpg,로봇이 담은 뒤 · 배치면이 비어야 한다
+3,211.267,none,verify,thumbs/ep3_end2.jpg,로봇이 담은 뒤 · 배치면이 비어야 한다
+4,215.267,none,judge,thumbs/ep4_t02.jpg,에피소드 시작 · 배치면이 비었다
+4,219.267,none,boundary,thumbs/ep4_t06.jpg,손이 물체를 놓는 중 · §C 안정성 게이트가 걸러낼 구간
+4,223.267,flower,judge,thumbs/ep4_t10.jpg,물건이 책상 위에 있다
+4,227.267,flower,judge,thumbs/ep4_t14.jpg,물건이 책상 위에 있다 · 팔이 프레임에 들어옴
+4,231.267,flower,judge,thumbs/ep4_t18.jpg,물건이 책상 위에 있다 · 팔이 프레임에 들어옴
+4,255.1,none,verify,thumbs/ep4_end6.jpg,로봇이 담은 뒤 · 배치면이 비어야 한다
+4,259.1,none,verify,thumbs/ep4_end2.jpg,로봇이 담은 뒤 · 배치면이 비어야 한다

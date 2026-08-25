@@ -47,7 +47,8 @@ def load_labels(path: Path, root: Path) -> list[dict]:
             if not image.exists():
                 print(f"  ! 이미지 없음: {image}", file=sys.stderr)
                 continue
-            rows.append({**row, "truth": truth, "image": image})
+            rows.append({**row, "truth": truth, "image": image,
+                         "kind": (row.get("kind") or "judge").strip()})
     return rows
 
 
@@ -107,6 +108,7 @@ async def main() -> None:
         truth_should_pack = row["truth"] in [o for o in checklist if o not in packed]
         results.append({
             "episode_index": row.get("episode_index"),
+            "kind": row.get("kind", "judge"),
             "thumb": row["thumb"],
             "truth": row["truth"],
             "pred": perception.object.value,
@@ -133,6 +135,22 @@ async def main() -> None:
     print("1. 물체 인식 — 혼동행렬")
     print("=" * 64)
     print(matrix(pairs))
+
+    # 구간을 섞으면 숫자가 뜻을 잃는다. 경계 프레임(손이 놓는 중)은 §C 의 안정성
+    # 게이트가 걸러낼 구간이라 판정 정확도와 같이 셀 수 없다.
+    by_kind: dict[str, list[bool]] = {}
+    for r in results:
+        by_kind.setdefault(r.get("kind", "judge"), []).append(r["truth"] == r["pred"])
+    print()
+    print("구간별")
+    LABEL = {"judge": "판정 시점", "verify": "사후 확인", "boundary": "경계 프레임"}
+    for kind in ("judge", "verify", "boundary"):
+        hits = by_kind.get(kind)
+        if not hits:
+            continue
+        note = "  (안정성 게이트가 걸러낼 구간 — 참고용)" if kind == "boundary" else ""
+        print(f"  {LABEL.get(kind, kind):10} {sum(hits):2}/{len(hits):2}"
+              f"  {sum(hits) / len(hits) * 100:5.1f}%{note}")
     print(f"\n전체 정확도: {correct}/{len(pairs)} = {correct/len(pairs)*100:.1f}%")
 
     per = defaultdict(lambda: [0, 0])
