@@ -47,76 +47,6 @@ PROGRESS_INTERVAL_S = 1.0
 #: 여기는 **동작 중 이탈**을 잡는 그물이고, 5Hz 면 충분하다.
 ENVELOPE_INTERVAL_S = 0.2
 
-#: 홈 자세의 오른팔 관절 1~7 (도). **정책이 추론을 시작하는 자세**로 맞춘 값이다.
-#:
-#: 원래 홈(`openarmsciedu/models/openarm_v1/vr_scene.xml` 의 `home` 키프레임)은
-#: 완전 좌우대칭이라 오른팔이 씬 카메라의 책상 시야를 가린다. 학습 데이터의 시작
-#: 자세는 대칭이 아니다 — 오른팔이 바깥으로 돌아가 있고, 그래야 책상이 보인다.
-#:
-#: 값의 출처: `leapshared/nuedive_test_90epi_merged_20260825` 의 **에피소드 60~89**
-#: t=0 중앙값. 그 데이터셋은 병합본이고 60번을 경계로 오른팔 설치가 바뀐다
-#: (ep0~59 의 right_joint_3 중앙값 -9.8 vs ep60~89 +25.1). 60~89 가 30개로 가장
-#: 최신 설치다.
-#:
-#:   관절   원래 홈   여기 값   차이        관절   원래 홈   여기 값   차이
-#:   j1     -15.64   -48.28   -32.64      j5      -5.39     0.59    +5.98
-#:   j2       9.97     0.63    -9.34      j6      15.93    25.34    +9.41
-#:   j3      -8.42    25.09   +33.51      j7      17.93    34.93   +16.99
-#:   j4      92.30    94.23    +1.92
-#:
-#: 7축 전부 preflight 봉투(위 STATE_ENVELOPE)와 URDF 관절 한계 안이고, 가장 빡빡한
-#: 축(j2)의 여유가 8.9도다.
-#:
-#: 왼팔은 건드리지 않는다. 같은 구간에서 왼팔은 j6 만 -16.5도 차이가 나고 나머지는
-#: 8도 이내라, 바꿀 근거가 오른팔만큼 분명하지 않다.
-RIGHT_HOME_DEG: tuple[float, ...] = (-48.28, 0.63, 25.09, 94.23, 0.59, 25.34, 34.93)
-
-
-def patch_home_pose() -> None:
-    """`OpenArmSciEdu` 의 오른팔 홈만 위 값으로 덮는다. `robot.connect()` 전에 부른다.
-
-    설정 파일로 하지 않는 이유: 홈 각도를 직접 적는 설정 키가 없다. `_home` 은
-    `model.scene` 이 가리키는 MJCF 의 `home` 키프레임에서 파생되므로, 설정으로
-    바꾸려면 씬과 `robot_a.yaml` 을 통째로 복사해야 한다. 그 yaml 은 임피던스·중력·
-    **그리퍼 실측 맵**·카메라 시리얼 같은 하드웨어 실측값 516줄이고, 복사해 두면
-    원본이 재캘리브레이션돼도 우리는 옛 값을 쓰게 된다 — 하필 그리퍼 맵은 그리퍼
-    여유 논의 전체가 근거로 삼는 값이라 그 드리프트가 실제로 위험하다.
-
-    그래서 원본 설정을 그대로 쓰고 각도 7개만 여기서 덮는다. 그 대신 상류 클래스에
-    의존하므로, `_home` 이 사라지거나 이름이 바뀌면 **기동 즉시** RuntimeError 를
-    낸다. 조용히 넘어가면 옛 대칭 홈으로 시연하게 되고, 화면만 봐서는 알 수 없다.
-
-    `build_rollout_context` 가 `make_robot_from_config()` 바로 다음 줄에서
-    `robot.connect()` 를 부르므로 그 사이에 끼어들 훅이 없다. 클래스 `__init__` 을
-    감싸는 것이 유일한 자리다.
-    """
-    import numpy as np
-
-    from openarm_sciedu.robots.openarm_sciedu.openarm_sciedu import OpenArmSciEdu
-
-    if getattr(OpenArmSciEdu, "_home_patched", False):
-        return
-
-    original_init = OpenArmSciEdu.__init__
-    target = np.radians(np.array(RIGHT_HOME_DEG, dtype=float))
-
-    def __init__(self, *args, **kwargs):        # noqa: N807
-        original_init(self, *args, **kwargs)
-        home = getattr(self, "_home", None)
-        if not isinstance(home, dict) or "right" not in home:
-            raise RuntimeError(
-                "OpenArmSciEdu 에 _home['right'] 가 없다 — 상류가 바뀌었다. "
-                "오른팔 홈 자세 패치(groot_runner.RIGHT_HOME_DEG)를 상류에 맞게 고칠 것. "
-                "그냥 두면 옛 좌우대칭 홈으로 돌아가 오른팔이 책상을 가린다."
-            )
-        before = np.degrees(np.asarray(home["right"], dtype=float))
-        home["right"] = target.copy()
-        logger.info("오른팔 홈 자세를 정책 시작 자세로 덮었다 (도): %s → %s",
-                    np.round(before, 2).tolist(), list(RIGHT_HOME_DEG))
-
-    OpenArmSciEdu.__init__ = __init__
-    OpenArmSciEdu._home_patched = True
-
 
 def _extract_state(obs: dict[str, Any]) -> list[float] | None:
     """관측 dict 에서 16차원 관절 상태를 뽑는다. 못 뽑으면 None.
@@ -331,7 +261,6 @@ class GrootBackend:
         from lerobot.utils.import_utils import register_third_party_plugins
 
         register_third_party_plugins()      # openarm_sciedu 로봇/텔레옵 등록
-        patch_home_pose()                   # 오른팔 홈을 정책 시작 자세로 (connect 전에)
         check_policy_type(self.policy_path)  # 알아보기 힘든 KeyError 를 앞에서 막는다
 
         if self.robot_cfg is None:
