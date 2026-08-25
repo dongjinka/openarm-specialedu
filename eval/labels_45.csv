@@ -1,0 +1,46 @@
+episode_index,offset_s,object,bag_state_at_start,thumb,notes
+0,6,whale,,thumbs/ep_000_t6.jpg,clean: object alone on surface
+1,6,tree,,thumbs/ep_001_t6.jpg,clean: object alone on surface
+2,6,flower,,thumbs/ep_002_t6.jpg,clean: object alone on surface
+3,6,flower,,thumbs/ep_003_t6.jpg,clean: object alone on surface
+4,6,tree,,thumbs/ep_004_t6.jpg,clean: object alone on surface
+5,6,whale,,thumbs/ep_005_t6.jpg,clean: object alone on surface
+6,6,tree,,thumbs/ep_006_t6.jpg,clean: object alone on surface
+7,6,flower,,thumbs/ep_007_t6.jpg,clean: object alone on surface
+8,6,whale,,thumbs/ep_008_t6.jpg,clean: object alone on surface
+9,6,whale,,thumbs/ep_009_t6.jpg,clean: object alone on surface
+10,6,tree,,thumbs/ep_010_t6.jpg,clean: object alone on surface
+11,6,whale,,thumbs/ep_011_t6.jpg,clean: object alone on surface
+12,6,flower,,thumbs/ep_012_t6.jpg,clean: object alone on surface
+13,6,tree,,thumbs/ep_013_t6.jpg,clean: object alone on surface
+14,6,flower,,thumbs/ep_014_t6.jpg,clean: object alone on surface
+15,6,whale,,thumbs/ep_015_t6.jpg,clean: object alone on surface
+16,6,tree,,thumbs/ep_016_t6.jpg,clean: object alone on surface
+17,6,whale,,thumbs/ep_017_t6.jpg,clean: object alone on surface
+18,6,tree,,thumbs/ep_018_t6.jpg,clean: object alone on surface
+38,6,tree,,thumbs/ep_038_t6.jpg,clean: object alone on surface
+39,6,whale,,thumbs/ep_039_t6.jpg,clean: object alone on surface
+40,6,whale,,thumbs/ep_040_t6.jpg,clean: object alone on surface
+41,6,tree,,thumbs/ep_041_t6.jpg,clean: object alone on surface
+42,6,flower,,thumbs/ep_042_t6.jpg,clean: object alone on surface
+43,6,flower,,thumbs/ep_043_t6.jpg,clean: object alone on surface
+44,6,whale,,thumbs/ep_044_t6.jpg,clean: object alone on surface
+0,2.5,none,,thumbs/ep_000_t2.5.jpg,hard: mid-placement / empty / in-hand
+1,2.5,none,,thumbs/ep_001_t2.5.jpg,hard: mid-placement / empty / in-hand
+3,2.5,flower,,thumbs/ep_003_t2.5.jpg,hard: mid-placement / empty / in-hand
+4,2.5,none,,thumbs/ep_004_t2.5.jpg,hard: mid-placement / empty / in-hand
+6,2.5,none,,thumbs/ep_006_t2.5.jpg,hard: mid-placement / empty / in-hand
+8,2.5,none,,thumbs/ep_008_t2.5.jpg,hard: mid-placement / empty / in-hand
+9,2.5,none,,thumbs/ep_009_t2.5.jpg,hard: mid-placement / empty / in-hand
+10,2.5,none,,thumbs/ep_010_t2.5.jpg,hard: mid-placement / empty / in-hand
+12,2.5,flower,,thumbs/ep_012_t2.5.jpg,hard: mid-placement / empty / in-hand
+13,2.5,tree,,thumbs/ep_013_t2.5.jpg,hard: mid-placement / empty / in-hand
+14,2.5,none,,thumbs/ep_014_t2.5.jpg,hard: mid-placement / empty / in-hand
+17,2.5,none,,thumbs/ep_017_t2.5.jpg,hard: mid-placement / empty / in-hand
+18,2.5,none,,thumbs/ep_018_t2.5.jpg,hard: mid-placement / empty / in-hand
+38,2.5,tree,,thumbs/ep_038_t2.5.jpg,hard: mid-placement / empty / in-hand
+39,2.5,whale,,thumbs/ep_039_t2.5.jpg,hard: mid-placement / empty / in-hand
+40,2.5,none,,thumbs/ep_040_t2.5.jpg,hard: mid-placement / empty / in-hand
+42,2.5,none,,thumbs/ep_042_t2.5.jpg,hard: mid-placement / empty / in-hand
+43,2.5,none,,thumbs/ep_043_t2.5.jpg,hard: mid-placement / empty / in-hand
+44,2.5,none,,thumbs/ep_044_t2.5.jpg,hard: mid-placement / empty / in-hand

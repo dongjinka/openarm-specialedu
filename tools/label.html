@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>에피소드 물체 라벨링</title>
+<style>
+  :root { --bg:#faf9f7; --fg:#1a1a18; --muted:#6b6a66; --line:#e2e0db; --accent:#1d9e75; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg);
+         font-family:system-ui,-apple-system,"Segoe UI",sans-serif; }
+  header { position:sticky; top:0; background:var(--bg); border-bottom:1px solid var(--line);
+           padding:12px 20px; display:flex; gap:16px; align-items:center; flex-wrap:wrap; z-index:10; }
+  h1 { font-size:15px; margin:0; font-weight:600; }
+  .stat { font-size:13px; color:var(--muted); }
+  .keys { font-size:12px; color:var(--muted); }
+  kbd { background:#fff; border:1px solid var(--line); border-radius:4px; padding:1px 5px;
+        font-family:ui-monospace,monospace; font-size:11px; }
+  button { font:inherit; font-size:13px; padding:6px 12px; border:1px solid var(--line);
+           background:#fff; border-radius:6px; cursor:pointer; }
+  button.primary { background:var(--accent); color:#fff; border-color:var(--accent); }
+  #grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr));
+          gap:12px; padding:20px; }
+  .card { border:1px solid var(--line); border-radius:8px; overflow:hidden; background:#fff;
+          cursor:pointer; }
+  .card.sel { outline:3px solid var(--accent); outline-offset:-1px; }
+  .card img { width:100%; display:block; background:#eee; }
+  .meta { padding:6px 8px; font-size:12px; display:flex; justify-content:space-between;
+          align-items:center; gap:6px; }
+  .lab { font-weight:600; }
+  .lab.tree{color:#2e7d32}.lab.flower{color:#c2185b}.lab.whale{color:#0277bd}.lab.none{color:#bbb}
+  #empty { padding:40px 20px; color:var(--muted); font-size:14px; line-height:1.7; }
+  code { background:#fff; border:1px solid var(--line); border-radius:4px; padding:1px 5px;
+         font-size:12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>에피소드 물체 라벨링</h1>
+  <span class="stat" id="stat">로딩 중…</span>
+  <span class="keys"><kbd>1</kbd> tree · <kbd>2</kbd> flower · <kbd>3</kbd> whale ·
+    <kbd>0</kbd> 지우기 · <kbd>←</kbd><kbd>→</kbd> 이동</span>
+  <button onclick="jumpNext()">다음 미라벨</button>
+  <button class="primary" onclick="download()">CSV 내려받기</button>
+</header>
+<div id="empty"></div>
+<div id="grid"></div>
+
+<script>
+const LABELS = { '1':'tree', '2':'flower', '3':'whale', '0':'' };
+let rows = [], cur = 0;
+
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/);
+  const head = lines[0].split(',');
+  return lines.slice(1).filter(l => l.trim()).map(line => {
+    // 단순 CSV (필드 내 콤마 없음 전제)
+    const cells = line.split(',');
+    const o = {};
+    head.forEach((h, i) => o[h.trim()] = (cells[i] ?? '').trim());
+    return o;
+  });
+}
+
+async function init() {
+  try {
+    const res = await fetch('episode_object_map.csv');
+    if (!res.ok) throw new Error(res.status);
+    rows = parseCSV(await res.text());
+    document.getElementById('empty').style.display = 'none';
+    render();
+  } catch (e) {
+    document.getElementById('empty').innerHTML =
+      'episode_object_map.csv 를 못 읽었습니다.<br><br>' +
+      '이 파일과 <code>thumbs/</code>, <code>episode_object_map.csv</code> 가 같은 폴더에 있어야 하고,<br>' +
+      'file:// 로 열면 브라우저가 막으므로 해당 폴더에서 아래를 실행한 뒤<br>' +
+      '<code>http://localhost:8000/label.html</code> 로 접속하세요.<br><br>' +
+      '<code>python -m http.server 8000</code>';
+    document.getElementById('stat').textContent = '';
+  }
+}
+
+function render() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = '';
+  rows.forEach((r, i) => {
+    const d = document.createElement('div');
+    d.className = 'card' + (i === cur ? ' sel' : '');
+    d.onclick = () => { cur = i; render(); };
+    const lab = r.object || 'none';
+    d.innerHTML =
+      `<img src="${r.thumb}" loading="lazy" alt="ep ${r.episode_index}">` +
+      `<div class="meta"><span>ep ${r.episode_index}</span>` +
+      `<span class="lab ${lab}">${r.object || '—'}</span></div>`;
+    grid.appendChild(d);
+  });
+  const done = rows.filter(r => r.object).length;
+  const counts = {};
+  rows.forEach(r => { if (r.object) counts[r.object] = (counts[r.object] || 0) + 1; });
+  const brk = Object.entries(counts).map(([k, v]) => `${k} ${v}`).join(' · ');
+  document.getElementById('stat').textContent =
+    `${done}/${rows.length} 라벨 완료${brk ? '  —  ' + brk : ''}`;
+  const sel = grid.children[cur];
+  if (sel) sel.scrollIntoView({ block:'nearest' });
+}
+
+function jumpNext() {
+  const i = rows.findIndex((r, j) => j > cur && !r.object);
+  cur = i >= 0 ? i : rows.findIndex(r => !r.object);
+  if (cur < 0) cur = 0;
+  render();
+}
+
+document.addEventListener('keydown', e => {
+  if (!rows.length) return;
+  if (e.key in LABELS) {
+    rows[cur].object = LABELS[e.key];
+    if (e.key !== '0' && cur < rows.length - 1) cur++;
+    render(); e.preventDefault();
+  } else if (e.key === 'ArrowRight') { cur = Math.min(cur + 1, rows.length - 1); render(); e.preventDefault(); }
+  else if (e.key === 'ArrowLeft')  { cur = Math.max(cur - 1, 0); render(); e.preventDefault(); }
+});
+
+function download() {
+  const head = ['episode_index','object','frames','bag_state','thumb','notes'];
+  const csv = [head.join(',')].concat(
+    rows.map(r => head.map(h => (r[h] ?? '')).join(','))
+  ).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type:'text/csv;charset=utf-8' }));
+  a.download = 'episode_object_map.csv';
+  a.click();
+}
+
+init();
+</script>
+</body>
+</html>

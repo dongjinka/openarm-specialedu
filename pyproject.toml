@@ -1,0 +1,42 @@
+[project]
+name = "openarm-specialedu"
+version = "0.1.0"
+description = "OpenArm 특수교육 PoC — 오케스트레이터 · 로봇 브릿지"
+requires-python = ">=3.12"
+# 프로세스 네 개가 한 리포에 있지만 **필요한 것이 서로 다르다.**
+# 여기 있는 것은 orchestrator · vlm_service · voice_service 가 공유하는 최소집합이다.
+# robot_bridge 는 lerobot 이 필요해서 leap 머신의 venv 에서 돈다 — 아래 `robot` 참고.
+dependencies = [
+    "fastapi>=0.115",          # orchestrator 허브, robot_bridge 프레임 서버
+    "uvicorn[standard]>=0.32",
+    "pydantic>=2.9",           # 이벤트 계약
+    "websockets>=13.0",        # 스포크 클라이언트
+    "httpx>=0.27",             # VLM·STT 호출, /frame/latest 소비
+    "pillow>=10.0",            # 프레임 축소·차분·JPEG 인코딩
+]
+
+[project.optional-dependencies]
+# 마이크가 달린 머신에서만. 없으면 voice_service 는 "듣기 꺼짐"으로 돈다.
+# Linux 는 먼저: sudo apt install libportaudio2
+voice = ["numpy>=1.24", "sounddevice>=0.4.6"]
+
+# robot_bridge 를 leap 머신의 venv 에서 돌릴 때 **그 venv 에 이미 있어야 하는 것**.
+# lerobot · torch · openarm_sciedu 는 그쪽이 제공하므로 여기에 적지 않는다 —
+# 우리가 설치하면 그쪽 환경을 흔든다. `tools/deploy_check.py` 로 확인만 한다.
+robot = ["websockets>=13.0", "fastapi>=0.115", "uvicorn[standard]>=0.32", "pillow>=10.0"]
+
+# 데이터셋 분석·프레임 추출 (시연 경로 아님).
+tools = ["pandas>=2.0", "pyarrow>=15.0", "av>=12.0", "numpy>=1.24", "requests>=2.31"]
+
+dev = ["pytest>=8.3", "pytest-asyncio>=0.24", "httpx>=0.27"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["orchestrator", "robot_bridge", "vlm_service", "voice_service"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

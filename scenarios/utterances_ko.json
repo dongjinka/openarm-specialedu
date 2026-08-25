@@ -1,0 +1,235 @@
+{
+  "_주석": [
+    "로봇이 하는 **고정 대본 전부**. 이것이 대사·파일명의 단일 원본이다.",
+    "",
+    "tools/render_lines.py 가 이걸 읽어 TTS 로 wav 를 미리 만들고, 태블릿이 그 파일을",
+    "재생한다. 실행 중에 합성하지 않는 이유:",
+    "  · 한 문장에 약 5초가 걸린다 — 아동을 그만큼 기다리게 할 수 없다",
+    "  · 매 회차 같은 소리가 나야 한다 (예측 가능성이 이 활동 설계의 근거다)",
+    "  · TTS 서비스가 죽어도 세션이 돈다",
+    "",
+    "상황에 따른 대화(고정 대본에 없는 말)만 실행 중에 합성한다 — `utterance_text` 경로다.",
+    "",
+    "`files` 는 태블릿의 static/scenarios/toy-bag/audio/<name>.wav 에 대응한다.",
+    "`source` 가 human 이면 사람 녹음이 이미 있다 — 덮어쓰지 않는다.",
+    "",
+    "⚠️ 사람 녹음과 TTS 가 섞이면 아동에게는 화자가 둘로 들린다. 전부 TTS 로 통일하려면",
+    "   render_lines.py --force 로 human 것까지 다시 만든다."
+  ],
+  "voice": {
+    "note": "느리고 또렷하게. 한 문장 40자 이내.",
+    "profile": "humelo_nana"
+  },
+  "utterances": {
+    "intro_text_arrived": {
+      "parts": [
+        "민수한테 문자가 왔어!",
+        "오늘 민수 집에서 같이 놀기로 했구나?",
+        "민수가 오늘 집에서 같이 놀 장난감을 가져와 달라고 하네."
+      ],
+      "files": [
+        "intro-0",
+        "intro-1",
+        "intro-2"
+      ],
+      "source": [
+        "human",
+        "human",
+        "human"
+      ]
+    },
+    "show_list": {
+      "parts": [
+        "민수가 가져와 달라고 한 장난감들을 우리 같이 챙겨볼까?",
+        "가방을 내 앞에 놓아줄래? 내가 챙기는 것을 도와줄게!"
+      ],
+      "why": "가방은 로봇이 연다 — 아동이 먼저 열면 정책이 본 적 없는 장면이 된다",
+      "files": [
+        "intro-3",
+        "intro-4"
+      ],
+      "source": [
+        "human",
+        "tts"
+      ]
+    },
+    "request_flower": {
+      "parts": [
+        "꽃 장난감을 챙겨 보자! 책상 위에 올려줄래?"
+      ],
+      "files": [
+        "lego-flower-request"
+      ],
+      "source": [
+        "human"
+      ]
+    },
+    "request_whale": {
+      "parts": [
+        "고래 장난감을 챙겨 보자! 책상 위에 올려줄래?"
+      ],
+      "files": [
+        "lego-whale-request"
+      ],
+      "source": [
+        "human"
+      ]
+    },
+    "request_tree": {
+      "parts": [
+        "나무 장난감을 챙겨 보자! 책상 위에 올려줄래?"
+      ],
+      "files": [
+        "lego-tree-request"
+      ],
+      "source": [
+        "human"
+      ]
+    },
+    "hint_flower_color": {
+      "parts": [
+        "빨간색 블록이 붙어 있는 거야."
+      ],
+      "why": "촉진 2단계",
+      "files": [
+        "hint-flower"
+      ],
+      "source": [
+        "tts"
+      ]
+    },
+    "hint_whale_color": {
+      "parts": [
+        "하늘색이고 납작한 거야."
+      ],
+      "why": "촉진 2단계",
+      "files": [
+        "hint-whale"
+      ],
+      "source": [
+        "tts"
+      ]
+    },
+    "hint_tree_color": {
+      "parts": [
+        "초록색 잎이 달린 거야."
+      ],
+      "why": "촉진 2단계",
+      "files": [
+        "hint-tree"
+      ],
+      "source": [
+        "tts"
+      ]
+    },
+    "model_flower_point": {
+      "parts": [
+        "이게 꽃 장난감이야. 내가 가리키는 거 보이지?"
+      ],
+      "why": "촉진 3단계 — 성공 경험으로 끝낸다",
+      "files": [
+        "model-flower"
+      ],
+      "source": [
+        "tts"
+      ]
+    },
+    "model_whale_point": {
+      "parts": [
+        "이게 고래 장난감이야. 내가 가리키는 거 보이지?"
+      ],
+      "why": "촉진 3단계",
+      "files": [
+        "model-whale"
+      ],
+      "source": [
+        "tts"
+      ]
+    },
+    "model_tree_point": {
+      "parts": [
+        "이게 나무 장난감이야. 내가 가리키는 거 보이지?"
+      ],
+      "why": "촉진 3단계",
+      "files": [
+        "model-tree"
+      ],
+      "source": [
+        "tts"
+      ]
+    },
+    "correct_generic": {
+      "parts": [
+        "잘했어!"
+      ],
+      "files": [
+        "correct"
+      ],
+      "source": [
+        "human"
+      ]
+    },
+    "incorrect_generic": {
+      "parts": [
+        "그건 민수가 말한 장난감이 아닌 것 같아."
+      ],
+      "why": "최소 오류 신호 — 무엇이 맞는지는 말하지 않는다",
+      "files": [
+        "incorrect"
+      ],
+      "source": [
+        "human"
+      ]
+    },
+    "duplicate_generic": {
+      "parts": [
+        "그건 벌써 가방에 넣었어!"
+      ],
+      "why": "오답이 아니다",
+      "files": [
+        "duplicate"
+      ],
+      "source": [
+        "tts"
+      ]
+    },
+    "robot_mistake": {
+      "parts": [
+        "앗, 내가 실수했나 봐. 다시 해볼게!"
+      ],
+      "why": "로봇의 실패를 아동이 자기 실패로 받으면 안 된다",
+      "files": [
+        "robot-mistake"
+      ],
+      "source": [
+        "tts"
+      ]
+    },
+    "pause_break": {
+      "parts": [
+        "잠깐 쉬었다 하자."
+      ],
+      "files": [
+        "pause-break"
+      ],
+      "source": [
+        "tts"
+      ]
+    },
+    "complete": {
+      "parts": [
+        "좋아 이제 갈 준비 완료!",
+        "이제 조심히 놀다와!"
+      ],
+      "why": "로봇이 매 사이클 가방을 닫으므로 마지막에 아동이 닫을 것이 없다",
+      "files": [
+        "outro-0",
+        "outro-1"
+      ],
+      "source": [
+        "human",
+        "tts"
+      ]
+    }
+  }
+}

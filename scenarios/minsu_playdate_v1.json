@@ -1,0 +1,72 @@
+{
+  "scenario_id": "minsu_playdate_v1",
+  "friend_name": "민수",
+  "checklist": [
+    "flower",
+    "whale",
+    "tree"
+  ],
+  "distractors": [
+    "car"
+  ],
+  "strict_order": true,
+  "max_retries_per_item": 3,
+  "prompt_hierarchy": [
+    "verbal",
+    "hint",
+    "model"
+  ],
+  "robot_deadline_ms": 69500,
+  "judge_timeout_ms": 15000,
+  "verify_timeout_ms": 10000,
+  "objects": {
+    "flower": {
+      "ko": "꽃 장난감",
+      "image": "img/flower.png",
+      "utterances": {
+        "verbal": "request_flower",
+        "hint": "hint_flower_color",
+        "model": "model_flower_point"
+      },
+      "tablet_id": "lego-flower"
+    },
+    "whale": {
+      "ko": "고래 장난감",
+      "image": "img/whale.png",
+      "utterances": {
+        "verbal": "request_whale",
+        "hint": "hint_whale_color",
+        "model": "model_whale_point"
+      },
+      "tablet_id": "lego-whale"
+    },
+    "tree": {
+      "ko": "나무 장난감",
+      "image": "img/tree.png",
+      "utterances": {
+        "verbal": "request_tree",
+        "hint": "hint_tree_color",
+        "model": "model_tree_point"
+      },
+      "tablet_id": "lego-tree"
+    }
+  },
+  "turn_phases": [
+    {
+      "until": 0.27,
+      "id": "opening"
+    },
+    {
+      "until": 0.52,
+      "id": "reaching"
+    },
+    {
+      "until": 0.92,
+      "id": "placing"
+    },
+    {
+      "until": 1.01,
+      "id": "closing"
+    }
+  ]
+}

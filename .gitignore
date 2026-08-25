@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+logs/
+episode_labels/
+*.egg-info/
+.cache/
+
+# Claude Code 로컬 워크트리 — 프로젝트 내용이 아니다
+.claude/
