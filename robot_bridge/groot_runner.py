@@ -411,7 +411,21 @@ class GrootBackend:
 
     async def close(self) -> None:
         """프로세스 종료 시 1회. 턴 사이에는 절대 부르지 않는다 —
-        하드웨어 disconnect 와 return_to_initial_position 이 일어난다."""
+        하드웨어 disconnect 와 return_to_initial_position 이 일어난다.
+
+        **`load()` 와 같은 이유로 메인 스레드에서 돈다.** `asyncio.to_thread` 로
+        감싸면 정리가 끝나갈 무렵 `ArmSession.__exit__` 이 신호 핸들러를 되돌리다가
+        `ValueError: signal only works in main thread` 로 터진다. `shutdown()` 안쪽은
+        그 예외를 막아 두었지만 `__exit__` 의 복원 루프(`arm_session.py:239`)는
+        막혀 있지 않다.
+
+        실측(dry_run, 2026-08-26): 팔은 내려놓고 토크까지 정상적으로 풀린 **뒤**
+        이 예외가 터졌고, 프로세스가 죽지 않아 40초 뒤 SIGKILL 이 필요했다.
+        팔은 안전했지만 종료가 매달렸다.
+
+        여기서 이벤트 루프가 몇 초 멈추지만 종료 시점이라 상관없다 — 오히려
+        정리가 끝날 때까지 다른 것이 끼어들지 않는 편이 낫다.
+        """
         if self.strategy is not None and self.ctx is not None:
-            await asyncio.to_thread(self.strategy.teardown, self.ctx)
+            self.strategy.teardown(self.ctx)
             self.strategy = None

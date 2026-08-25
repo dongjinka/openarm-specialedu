@@ -50,6 +50,12 @@ POLICY_GLOB = str(pathlib.Path.home() / ".cache/huggingface/hub"
                   / "models--leapshared--nuedive_test_90epi_merged_20260825_GR00T17"
                   / "snapshots" / "*")
 ROBOT_CONFIG = REPO / "config" / "robot_real.json"
+#: `dry_run: true` 판. CAN 에 붙어 모터를 읽되 **프레임을 하나도 보내지 않는다**
+#: (`arm_session.write`/`write_with_torque` 가 즉시 return). 연결 때 토크를 끄므로
+#: 팔이 들린 채로는 쓰면 안 된다 — 그 상태에서 토크를 끄면 그대로 떨어진다.
+#: `go_home` 과 `descend_to_rest` 도 건너뛰므로 **실제 하강 동작은 검증되지 않는다.**
+#: 검증되는 것은 기동·연결·정책 로드, 그리고 종료 신호가 teardown 까지 풀려 내려오는지다.
+ROBOT_CONFIG_DRYRUN = REPO / "config" / "robot_real_dryrun.json"
 
 HUB = "ws://127.0.0.1:8000"
 HEALTH = "http://127.0.0.1:8000/health"
@@ -122,6 +128,39 @@ def find_stale() -> list[tuple[int, str]]:
                      args):
             found.append((pid, args))
     return found
+
+
+def find_camera_holders() -> list[tuple[int, str]]:
+    """RealSense 를 잡고 있는 **아무** 프로세스나 찾는다. 이름으로 찾지 않는다.
+
+    이름 목록으로 거르면 놓친다. 실제로 `openarm-special-backend`(우리 것이 아닌
+    별개 서비스)가 `/dev/video*` 14개를 전부 물고 있어서 카메라 열기가
+    `xioctl(VIDIOC_S_FMT) failed, errno=16 Device or resource busy` 로 죽었고,
+    이름이 달라 위 검사에 걸리지 않았다(2026-08-26 실측).
+
+    RealSense 는 한 프로세스만 열 수 있다. 뷰어든 다른 서비스든 붙어 있으면
+    로봇이 **아예 기동하지 못한다** — 시연 아침에 원인을 찾느라 시간을 날릴 자리다.
+    """
+    mine = {os.getpid(), os.getppid()}
+    holders: dict[int, str] = {}
+    for node in sorted(glob.glob("/dev/video*")):
+        try:
+            out = subprocess.run(["fuser", node], capture_output=True, text=True, timeout=10)
+        except (OSError, subprocess.SubprocessError):
+            return []                       # fuser 가 없으면 검사를 포기한다
+        for token in out.stdout.split():
+            try:
+                pid = int(token)
+            except ValueError:
+                continue
+            if pid in mine or pid in holders:
+                continue
+            try:
+                cmd = pathlib.Path(f"/proc/{pid}/cmdline").read_bytes().replace(b"\0", b" ")
+                holders[pid] = cmd.decode("utf-8", "replace").strip() or f"pid {pid}"
+            except OSError:
+                holders[pid] = f"pid {pid}"
+    return sorted(holders.items())
 
 
 # ────────────────────────────────────────────────── 프로세스 관리
@@ -203,19 +242,19 @@ def resolve_policy() -> str:
     return snaps[-1]
 
 
-def check_real_prereqs() -> None:
+def check_real_prereqs(robot_config: pathlib.Path) -> None:
     if not SCIEDU_PY.is_file():
         die(f"{SCIEDU_PY} 가 없다 — lerobot·GR00T 플러그인이 있는 인터프리터가 필요하다.")
     if not (VENDOR / "websockets").is_dir():
         die(f"{VENDOR}/websockets 가 없다.\n"
             f"     그 인터프리터에는 websockets 가 없어서 우리 쪽에 벤더링해야 한다:\n"
             f"       cd {REPO} && uv pip install --target vendor websockets==17.0.1")
-    if not ROBOT_CONFIG.is_file():
-        die(f"{ROBOT_CONFIG} 가 없다.")
-    cfg = json.loads(ROBOT_CONFIG.read_text(encoding="utf-8"))
+    if not robot_config.is_file():
+        die(f"{robot_config} 가 없다.")
+    cfg = json.loads(robot_config.read_text(encoding="utf-8"))
     path = cfg.get("config_path")
     if path and not pathlib.Path(path).is_file():
-        die(f"robot_real.json 이 가리키는 설정이 없다: {path}")
+        die(f"{robot_config.name} 이 가리키는 설정이 없다: {path}")
 
 
 def fetch_new_code() -> str | None:
@@ -274,6 +313,10 @@ def main() -> None:
     ap = argparse.ArgumentParser(description="시연 런처 — 전 구간을 순서대로 띄운다")
     ap.add_argument("--sim", action="store_true",
                     help="실물 대신 시뮬레이터 백엔드 (하드웨어를 건드리지 않는다)")
+    ap.add_argument("--dry-run", action="store_true",
+                    help="실물에 붙되 모터에 프레임을 하나도 보내지 않는다. "
+                         "연결 때 토크를 끄므로 **팔이 내려와 있을 때만** 쓸 것. "
+                         "하강 동작은 건너뛰므로 그것까지 검증되지는 않는다")
     ap.add_argument("--no-vlm", action="store_true",
                     help="VLM 을 띄우지 않는다 (운영자 수동 판정 폴백으로 돈다)")
     ap.add_argument("--scenario", default="minsu_playdate_v1")
@@ -296,9 +339,23 @@ def main() -> None:
     ok("잔여 프로세스 없음")
 
     if not args.sim:
-        check_real_prereqs()
+        holders = find_camera_holders()
+        if holders:
+            print()
+            warn("카메라를 이미 잡고 있는 프로세스가 있다 — RealSense 는 한 프로세스만 연다:")
+            for pid, cmdline in holders:
+                print(f"       pid={pid}  {cmdline[:110]}")
+            die("먼저 정리할 것:  kill -TERM " + " ".join(str(p) for p, _ in holders))
+        ok("카메라 점유 없음")
+
+    robot_config = ROBOT_CONFIG_DRYRUN if args.dry_run else ROBOT_CONFIG
+    if not args.sim:
+        check_real_prereqs(robot_config)
         policy = resolve_policy()
         ok(f"정책 체크포인트 {pathlib.Path(policy).parent.parent.name[:40]}…")
+        if args.dry_run:
+            warn("DRY RUN — 모터에 프레임을 보내지 않는다. 연결 때 토크를 끈다.")
+            warn("  팔이 들려 있으면 지금 멈출 것. 내려와 있을 때만 안전하다.")
 
     services: list[Service] = []
 
@@ -335,15 +392,18 @@ def main() -> None:
         else:
             rb = Service("robot_bridge", [
                 str(SCIEDU_PY), "-m", "robot_bridge.main", "--real",
-                "--policy-path", policy, "--robot-config", str(ROBOT_CONFIG),
+                "--policy-path", policy, "--robot-config", str(robot_config),
                 "--url", f"{HUB}/ws/robot", "--frame-port", "8081",
             ], env={"PYTHONPATH": f"{REPO}:{VENDOR}"})
         services.append(rb)
         rb.start()
         if not args.sim:
             print()
-            warn("실물 팔이 곧 홈으로 이동한다 (약 6초, STAND CLEAR 카운트다운).")
-            warn("팔 주변에서 물러나 지켜볼 것.")
+            if args.dry_run:
+                warn("DRY RUN — 팔은 움직이지 않는다 (go_home 도 건너뛴다).")
+            else:
+                warn("실물 팔이 곧 홈으로 이동한다 (약 6초, STAND CLEAR 카운트다운).")
+                warn("팔 주변에서 물러나 지켜볼 것.")
             print()
             # GR00T 로드는 조용히 실패할 수 있다 — 그러면 브리지는 살아 있는 것처럼
             # 보이는데 모든 명령이 데드라인까지 사라진다. 여기서 확실히 확인한다.
