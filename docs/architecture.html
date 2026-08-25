@@ -1,0 +1,843 @@
+<title>민수의 놀이 약속</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+KR:wght@300;400;500;600&display=swap">
+
+<style>
+  :root {
+    --ground: #F4F6F8;
+    --surface: #FFFFFF;
+    --surface-2: #EBEFF3;
+    --line: #D2DAE1;
+    --line-soft: #E2E8ED;
+    --ink: #11161A;
+    --muted: #55646E;
+    --accent: #14647E;
+    --accent-soft: #DCEAF0;
+    --ok: #2C6E4E;
+    --warn: #855D10;
+    --stop: #9C382B;
+
+    --sans: "IBM Plex Sans KR", -apple-system, "Segoe UI", "Malgun Gothic", sans-serif;
+    --mono: "IBM Plex Mono", "SFMono-Regular", "Cascadia Mono", monospace;
+
+    --s1: 6px; --s2: 12px; --s3: 20px; --s4: 32px; --s5: 52px; --s6: 80px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #11151A;
+      --surface: #181E24;
+      --surface-2: #1E262D;
+      --line: #2D3841;
+      --line-soft: #232C34;
+      --ink: #DFE6EB;
+      --muted: #93A2AD;
+      --accent: #6EBDD8;
+      --accent-soft: #16303B;
+      --ok: #6BC095;
+      --warn: #D3A64C;
+      --stop: #E08878;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground: #11151A;
+    --surface: #181E24;
+    --surface-2: #1E262D;
+    --line: #2D3841;
+    --line-soft: #232C34;
+    --ink: #DFE6EB;
+    --muted: #93A2AD;
+    --accent: #6EBDD8;
+    --accent-soft: #16303B;
+    --ok: #6BC095;
+    --warn: #D3A64C;
+    --stop: #E08878;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-weight: 400;
+    font-size: 16px;
+    line-height: 1.72;
+    -webkit-font-smoothing: antialiased;
+    margin: 0;
+    padding: var(--s5) var(--s3) var(--s6);
+  }
+
+  .page {
+    max-width: 1060px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: var(--s5);
+  }
+
+  /* ── masthead ─────────────────────────────────────────── */
+  .masthead { display: flex; flex-direction: column; gap: var(--s3); }
+
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    letter-spacing: 0.13em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 0;
+  }
+
+  h1 {
+    font-size: clamp(30px, 5vw, 46px);
+    font-weight: 600;
+    line-height: 1.16;
+    letter-spacing: -0.022em;
+    text-wrap: balance;
+    margin: 0;
+  }
+
+  .thesis {
+    max-width: 62ch;
+    font-size: 17.5px;
+    font-weight: 300;
+    color: var(--muted);
+    margin: 0;
+  }
+  .thesis strong { font-weight: 500; color: var(--ink); }
+
+  .facts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .fact {
+    background: var(--surface);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .fact b {
+    font-family: var(--mono);
+    font-size: 21px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    font-variant-numeric: tabular-nums;
+  }
+  .fact span {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.45;
+  }
+
+  /* ── sections ─────────────────────────────────────────── */
+  section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s3);
+    scroll-margin-top: var(--s3);
+  }
+
+  .head {
+    display: flex;
+    flex-direction: column;
+    gap: var(--s1);
+    border-top: 1px solid var(--line);
+    padding-top: var(--s2);
+  }
+
+  h2 {
+    font-size: 25px;
+    font-weight: 600;
+    letter-spacing: -0.018em;
+    line-height: 1.28;
+    text-wrap: balance;
+    margin: 0;
+  }
+
+  h3 {
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.005em;
+    margin: 0;
+  }
+
+  p { max-width: 66ch; margin: 0; }
+  section > p { color: var(--ink); }
+
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  code, .m {
+    font-family: var(--mono);
+    font-size: 0.88em;
+    font-variant-ligatures: none;
+  }
+  p code, li code, td code, dd code {
+    background: var(--surface-2);
+    padding: 0.1em 0.34em;
+    border-radius: 2px;
+  }
+
+  /* ── figures ──────────────────────────────────────────── */
+  figure {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--s2);
+  }
+  .canvas {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: var(--s3) var(--s2);
+    overflow-x: auto;
+  }
+  .canvas svg {
+    display: block;
+    width: 100%;
+    min-width: 620px;
+    height: auto;
+    color: var(--ink);
+  }
+  figcaption {
+    font-size: 13.5px;
+    line-height: 1.62;
+    color: var(--muted);
+    max-width: 74ch;
+  }
+  figcaption b { color: var(--ink); font-weight: 500; }
+
+  /* svg primitives */
+  .n { fill: var(--surface); stroke: var(--line); stroke-width: 1; }
+  .n-hub { fill: var(--surface-2); stroke: var(--ink); stroke-width: 1.4; }
+  .n-acc { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.3; }
+  .zone { fill: none; stroke: var(--line); stroke-width: 1; stroke-dasharray: 5 4; }
+  .lbl { font-family: var(--mono); font-size: 11.5px; font-weight: 500; fill: var(--ink); }
+  .lbl-s { font-family: var(--sans); font-size: 10px; font-weight: 400; fill: var(--muted); }
+  .edge-t { font-family: var(--mono); font-size: 10px; fill: var(--muted); }
+  .edge-t-acc { font-family: var(--mono); font-size: 10px; fill: var(--accent); font-weight: 500; }
+  .zone-t { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.06em; fill: var(--muted); }
+  .e { stroke: var(--ink); stroke-width: 1.2; fill: none; opacity: 0.62; }
+  .e-acc { stroke: var(--accent); stroke-width: 1.6; fill: none; }
+  .e-dash { stroke: var(--ink); stroke-width: 1.2; fill: none; opacity: 0.45; stroke-dasharray: 4 3; }
+
+  /* ── tables ───────────────────────────────────────────── */
+  .tw { overflow-x: auto; border: 1px solid var(--line); border-radius: 3px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 14px; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+  thead th {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 500;
+    color: var(--muted);
+    background: var(--surface-2);
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td.num { font-family: var(--mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  td.who { font-family: var(--mono); font-size: 12.5px; white-space: nowrap; }
+
+  /* ── rule cards ───────────────────────────────────────── */
+  .rules { display: grid; grid-template-columns: repeat(auto-fit, minmax(258px, 1fr)); gap: var(--s2); }
+  .rule {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: var(--s1);
+  }
+  .rule p { font-size: 13.5px; line-height: 1.6; color: var(--muted); max-width: none; }
+  .rule .m { font-size: 11.5px; color: var(--accent); }
+
+  /* ── status pills ─────────────────────────────────────── */
+  .pill {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    letter-spacing: 0.04em;
+    padding: 1px 7px;
+    border-radius: 2px;
+    border: 1px solid currentColor;
+    white-space: nowrap;
+  }
+  .p-ok { color: var(--ok); }
+  .p-warn { color: var(--warn); }
+  .p-stop { color: var(--stop); }
+  .p-idle { color: var(--muted); }
+
+  /* ── definition rows ──────────────────────────────────── */
+  dl { margin: 0; display: flex; flex-direction: column; gap: var(--s2); }
+  .row {
+    display: grid;
+    grid-template-columns: 168px 1fr;
+    gap: var(--s3);
+    align-items: start;
+    padding-bottom: var(--s2);
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .row:last-child { border-bottom: none; padding-bottom: 0; }
+  dt { font-family: var(--mono); font-size: 12.5px; font-weight: 500; padding-top: 2px; }
+  dd { margin: 0; font-size: 14.5px; line-height: 1.62; color: var(--muted); }
+  dd b { color: var(--ink); font-weight: 500; }
+
+  @media (max-width: 640px) {
+    .row { grid-template-columns: 1fr; gap: var(--s1); }
+  }
+
+  .foot {
+    border-top: 1px solid var(--line);
+    padding-top: var(--s2);
+    font-size: 12.5px;
+    color: var(--muted);
+    font-family: var(--mono);
+    line-height: 1.7;
+  }
+</style>
+
+<div class="page">
+
+  <header class="masthead">
+    <p class="eyebrow">자폐 아동 로봇 매개 중재 · 아키텍처 정리 · 2026-08-25</p>
+    <h1>민수의 놀이 약속</h1>
+    <p class="thesis">아이가 책상에 장난감을 올리면 <strong>VLM</strong>이 무엇인지 판정하고, 정해진 발화가 태블릿에서 나오고, 맞았을 때만 <strong>GR00T</strong>가 팔을 움직여 가방에 담는다. 여섯 프로세스가 한 대의 머신 안에서 돌고, 인터넷을 건너는 것은 태블릿 화면 갱신 하나뿐이다.</p>
+
+    <div class="facts">
+      <div class="fact"><b>6</b><span>프로세스 (전부 leap 머신)</span></div>
+      <div class="fact"><b>16</b><span>세션 상태</span></div>
+      <div class="fact"><b>7</b><span>역할 · 타입으로 게이팅</span></div>
+      <div class="fact"><b>20/20</b><span>VLM 판정 실측</span></div>
+      <div class="fact"><b>46.3초</b><span>로봇 턴 (데이터셋 평균)</span></div>
+      <div class="fact"><b>14/17</b><span>과제분석 지표 자동 수집</span></div>
+    </div>
+  </header>
+
+  <!-- ═══════════════ 배치 ═══════════════ -->
+  <section>
+    <div class="head">
+      <p class="eyebrow">배치</p>
+      <h2>허브 하나, 스포크 다섯, 그리고 경계선 하나</h2>
+    </div>
+
+    <p><code>orchestrator</code>가 세션 상태를 혼자 소유하고, 나머지는 전부 스포크다. 스포크끼리는 말하지 않는다 — VLM이 로봇에게 직접 명령할 경로가 <em>규약</em>이 아니라 <em>타입</em>으로 존재하지 않는다.</p>
+
+    <figure>
+      <div class="canvas">
+        <svg viewBox="0 0 900 496" role="img" aria-label="태블릿만 인터넷을 건너고, VLM·음성·운영자·로봇 브리지와 카메라는 전부 leap 머신 안에서 orchestrator 허브에 직접 연결된 배치도">
+          <defs>
+            <marker id="a1" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M0,1 L9,5 L0,9 z" fill="currentColor" opacity="0.62"/>
+            </marker>
+            <marker id="a1acc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+              <path d="M0,1 L9,5 L0,9 z" fill="var(--accent)"/>
+            </marker>
+          </defs>
+
+          <!-- tablet, outside -->
+          <rect class="n-acc" x="330" y="16" width="240" height="52" rx="3"/>
+          <text class="lbl" x="450" y="38" text-anchor="middle" fill="var(--accent)">태블릿</text>
+          <text class="lbl-s" x="450" y="54" text-anchor="middle">Cloudflare Pages · 표정과 음성만</text>
+
+          <!-- internet boundary -->
+          <line class="zone" x1="16" y1="104" x2="884" y2="104"/>
+          <text class="zone-t" x="16" y="96">인터넷 경계</text>
+          <text class="zone-t" x="884" y="96" text-anchor="end">cloudflared 터널 — 아래로는 전부 127.0.0.1</text>
+
+          <!-- leap machine zone -->
+          <rect class="zone" x="24" y="128" width="852" height="344" rx="4"/>
+          <text class="zone-t" x="40" y="150">LEAP 머신 (40GB GPU)</text>
+
+          <!-- nodes -->
+          <rect class="n" x="56" y="168" width="180" height="52" rx="3"/>
+          <text class="lbl" x="146" y="190" text-anchor="middle">operator_cli</text>
+          <text class="lbl-s" x="146" y="206" text-anchor="middle">사람의 개입 통로</text>
+
+          <rect class="n" x="56" y="256" width="180" height="52" rx="3"/>
+          <text class="lbl" x="146" y="278" text-anchor="middle">vlm_service</text>
+          <text class="lbl-s" x="146" y="294" text-anchor="middle">판정 · 사후 확인 · 감시</text>
+
+          <rect class="n" x="664" y="256" width="180" height="52" rx="3"/>
+          <text class="lbl" x="754" y="278" text-anchor="middle">voice_service</text>
+          <text class="lbl-s" x="754" y="294" text-anchor="middle">VAD · STT · 의도 분류</text>
+
+          <rect class="n-hub" x="350" y="252" width="200" height="60" rx="3"/>
+          <text class="lbl" x="450" y="277" text-anchor="middle">orchestrator</text>
+          <text class="lbl-s" x="450" y="294" text-anchor="middle">상태 머신 · 로그 · 허브</text>
+
+          <rect class="n" x="350" y="398" width="200" height="56" rx="3"/>
+          <text class="lbl" x="450" y="421" text-anchor="middle">robot_bridge</text>
+          <text class="lbl-s" x="450" y="437" text-anchor="middle">GR00T 상주 · 카메라 소유</text>
+
+          <rect class="n" x="664" y="400" width="180" height="52" rx="3"/>
+          <text class="lbl" x="754" y="422" text-anchor="middle">양팔 · 카메라 3대</text>
+          <text class="lbl-s" x="754" y="438" text-anchor="middle">bi_openarm_follower</text>
+
+          <!-- tablet ↔ hub, crossing boundary -->
+          <line class="e-acc" x1="450" y1="68" x2="450" y2="252" marker-start="url(#a1acc)" marker-end="url(#a1acc)"/>
+          <text class="edge-t-acc" x="462" y="146">state ⇄ advance</text>
+          <text class="edge-t" x="462" y="162">이것만 망을 건넌다</text>
+
+          <!-- vlm ↔ hub -->
+          <line class="e" x1="236" y1="282" x2="350" y2="282" marker-start="url(#a1)" marker-end="url(#a1)"/>
+          <text class="edge-t" x="293" y="274" text-anchor="middle">judgement</text>
+
+          <!-- voice ↔ hub -->
+          <line class="e" x1="664" y1="282" x2="550" y2="282" marker-start="url(#a1)" marker-end="url(#a1)"/>
+          <text class="edge-t" x="607" y="274" text-anchor="middle">child_utterance</text>
+
+          <!-- operator → hub -->
+          <path class="e" d="M236,194 L320,194 L320,262 L350,262" marker-end="url(#a1)"/>
+          <text class="edge-t" x="248" y="186">advance · pause · 강제 성공</text>
+
+          <!-- hub ↔ robot_bridge -->
+          <line class="e" x1="450" y1="312" x2="450" y2="398" marker-start="url(#a1)" marker-end="url(#a1)"/>
+          <text class="edge-t" x="462" y="344">robot_cmd ⇄ robot_done</text>
+          <text class="edge-t" x="462" y="360">camera_health · progress_tick</text>
+
+          <!-- bridge → arms -->
+          <line class="e" x1="550" y1="426" x2="664" y2="426" marker-end="url(#a1)"/>
+          <text class="edge-t" x="607" y="418" text-anchor="middle">30Hz 제어 루프</text>
+
+          <!-- vlm → bridge frames -->
+          <path class="e" d="M146,308 L146,426 L350,426" marker-end="url(#a1)"/>
+          <text class="edge-t" x="252" y="418" text-anchor="middle">GET /frame/latest · 3Hz</text>
+        </svg>
+      </div>
+      <figcaption><b>움직이는 팔을 감독하는 경로는 전부 로컬이다.</b> <code>robot_cmd</code>, <code>camera_health</code>, <code>robot_abort</code>, 그리고 초당 세 번의 프레임 폴링까지 모두 <code>127.0.0.1</code>에서 일어난다. 터널이 끊기면 태블릿 화면이 멈출 뿐, 팔은 로컬 감독 아래 그대로 있다. 카메라를 직접 여는 프로세스는 <code>robot_bridge</code> 하나뿐이고, VLM은 HTTP로만 프레임을 받는다.</figcaption>
+    </figure>
+
+    <div class="tw">
+      <table>
+        <thead>
+          <tr><th>프로세스</th><th>혼자 소유하는 것</th><th>발행</th><th>상태</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="who">orchestrator<br><span class="lbl-s">:8000</span></td>
+            <td>세션 상태 전부. 타이머, 촉진 위계, JSONL 로그. I/O 없는 순수 함수 <code>(상태, 이벤트) → (상태, 효과)</code></td>
+            <td class="who">state · robot_cmd<br>set_watch · set_listen</td>
+            <td><span class="pill p-ok">검증됨</span></td>
+          </tr>
+          <tr>
+            <td class="who">robot_bridge<br><span class="lbl-s">:8081</span></td>
+            <td>GR00T 정책(기동 시 1회 로드, 상주). 카메라 3대. 매 틱 관절 봉투 검사</td>
+            <td class="who">robot_done · progress_tick<br>camera_health</td>
+            <td><span class="pill p-warn">실물 미검증</span></td>
+          </tr>
+          <tr>
+            <td class="who">vlm_service</td>
+            <td>판정 · 사후 확인 · 변화 감시. 소켓 두 개(<code>/ws/vlm</code>, <code>/ws/capture</code>)</td>
+            <td class="who">judgement · vlm_hold<br>child_placed</td>
+            <td><span class="pill p-ok">실측 20/20</span></td>
+          </tr>
+          <tr>
+            <td class="who">voice_service</td>
+            <td>에너지 VAD(푸시투톡 없음), CLOVA STT, 규칙+퍼지 의도 분류</td>
+            <td class="who">child_utterance</td>
+            <td><span class="pill p-warn">오디오 장치 미확인</span></td>
+          </tr>
+          <tr>
+            <td class="who">태블릿</td>
+            <td>아무것도. 서버 상태를 그리고 오디오를 재생하는 <em>뷰</em>다</td>
+            <td class="who">advance</td>
+            <td><span class="pill p-ok">e2e 통과</span></td>
+          </tr>
+          <tr>
+            <td class="who">operator_cli</td>
+            <td>사람. 모든 자동 경로의 폴백이자 최종 권한</td>
+            <td class="who">advance · pause<br>robot_abort</td>
+            <td><span class="pill p-ok">검증됨</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═══════════════ 흐름 ═══════════════ -->
+  <section>
+    <div class="head">
+      <p class="eyebrow">흐름</p>
+      <h2>항목 하나가 통과하는 열여섯 개의 상태</h2>
+    </div>
+
+    <p>세션은 항목 3개를 순서대로 돌린다. 아래 루프가 항목당 한 번 돌고, 각 루프는 판정 결과에 따라 세 갈래로 나뉜다. <b>실패로 끝나는 경로는 없다</b> — 촉진 위계가 <code>verbal → hint → model</code>로 올라가고, 마지막에는 답을 보여준다.</p>
+
+    <figure>
+      <div class="canvas">
+        <svg viewBox="0 0 980 500" role="img" aria-label="세션 상태 흐름도. 인트로 뒤 턴 루프가 시작되고, 판정이 오답·중복·정답 세 갈래로 나뉘며, 오답과 중복은 촉진 위계를 올려 요청으로 돌아가고, 정답만 로봇 턴으로 진행한다">
+          <defs>
+            <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M0,1 L9,5 L0,9 z" fill="currentColor" opacity="0.62"/>
+            </marker>
+            <marker id="a2acc" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M0,1 L9,5 L0,9 z" fill="var(--accent)"/>
+            </marker>
+          </defs>
+
+          <!-- opening band -->
+          <rect class="n" x="24" y="26" width="92" height="34" rx="3"/>
+          <text class="lbl" x="70" y="48" text-anchor="middle">IDLE</text>
+          <rect class="n" x="140" y="26" width="100" height="34" rx="3"/>
+          <text class="lbl" x="190" y="48" text-anchor="middle">INTRO</text>
+          <rect class="n" x="264" y="26" width="118" height="34" rx="3"/>
+          <text class="lbl" x="323" y="48" text-anchor="middle">SHOW_LIST</text>
+
+          <line class="e" x1="116" y1="43" x2="140" y2="43" marker-end="url(#a2)"/>
+          <line class="e" x1="240" y1="43" x2="264" y2="43" marker-end="url(#a2)"/>
+          <path class="e" d="M323,60 L323,78 L107,78 L107,126" marker-end="url(#a2)"/>
+          <text class="edge-t" x="333" y="74">첫 항목</text>
+
+          <!-- pause -->
+          <rect class="n" x="736" y="26" width="96" height="34" rx="3"/>
+          <text class="lbl" x="784" y="48" text-anchor="middle">PAUSED</text>
+          <path class="e-dash" d="M736,43 L640,43 L640,90"/>
+          <text class="edge-t" x="650" y="36">어느 상태에서든</text>
+
+          <!-- loop zone -->
+          <rect class="zone" x="24" y="90" width="832" height="310" rx="4"/>
+          <text class="zone-t" x="40" y="112">턴 루프 · 항목 1개당 1회</text>
+
+          <!-- row 1 -->
+          <rect class="n" x="48" y="126" width="118" height="36" rx="3"/>
+          <text class="lbl" x="107" y="149" text-anchor="middle">REQUEST</text>
+          <rect class="n" x="222" y="126" width="134" height="36" rx="3"/>
+          <text class="lbl" x="289" y="149" text-anchor="middle">WAIT_CHILD</text>
+          <rect class="n" x="412" y="126" width="100" height="36" rx="3"/>
+          <text class="lbl" x="462" y="149" text-anchor="middle">JUDGE</text>
+
+          <line class="e" x1="166" y1="144" x2="222" y2="144" marker-end="url(#a2)"/>
+          <line class="e" x1="356" y1="144" x2="412" y2="144" marker-end="url(#a2)"/>
+          <text class="edge-t" x="194" y="138" text-anchor="middle">발화</text>
+          <text class="edge-t" x="384" y="138" text-anchor="middle">배치</text>
+
+          <!-- fan-out bar -->
+          <path class="e" d="M462,162 L462,180 M107,180 L462,180 M107,180 L107,200 M289,180 L289,200 M462,180 L462,200"/>
+          <path class="e" d="M107,192 L107,200" marker-end="url(#a2)"/>
+          <path class="e" d="M289,192 L289,200" marker-end="url(#a2)"/>
+          <path class="e-acc" d="M462,192 L462,200" marker-end="url(#a2acc)"/>
+          <text class="edge-t" x="114" y="194">오답</text>
+          <text class="edge-t" x="296" y="194">중복</text>
+          <text class="edge-t-acc" x="470" y="194">정답</text>
+
+          <!-- row 2 -->
+          <rect class="n" x="48" y="200" width="118" height="36" rx="3"/>
+          <text class="lbl" x="107" y="223" text-anchor="middle">INCORRECT</text>
+          <rect class="n" x="222" y="200" width="134" height="36" rx="3"/>
+          <text class="lbl" x="289" y="223" text-anchor="middle">DUPLICATE</text>
+          <rect class="n-acc" x="412" y="200" width="100" height="36" rx="3"/>
+          <text class="lbl" x="462" y="223" text-anchor="middle" fill="var(--accent)">CORRECT</text>
+
+          <!-- returns -->
+          <path class="e" d="M48,218 L36,218"/>
+          <path class="e" d="M222,218 L196,218 L196,250 L36,250"/>
+          <path class="e" d="M36,358 L36,144 L48,144" marker-end="url(#a2)"/>
+          <text class="edge-t" x="120" y="266">촉진 위계 +1 · 같은 물건이면 호출 0</text>
+
+          <!-- row 3 -->
+          <line class="e-acc" x1="462" y1="236" x2="462" y2="272" marker-end="url(#a2acc)"/>
+          <rect class="n" x="403" y="272" width="118" height="36" rx="3"/>
+          <text class="lbl" x="462" y="295" text-anchor="middle">ROBOT_TURN</text>
+          <rect class="n" x="568" y="272" width="128" height="36" rx="3"/>
+          <text class="lbl" x="632" y="295" text-anchor="middle">ROBOT_VERIFY</text>
+          <rect class="n" x="736" y="272" width="96" height="36" rx="3"/>
+          <text class="lbl" x="784" y="295" text-anchor="middle">ROBOT_FAIL</text>
+
+          <line class="e" x1="521" y1="290" x2="568" y2="290" marker-end="url(#a2)"/>
+          <text class="edge-t" x="544" y="284" text-anchor="middle">≈46초</text>
+          <line class="e" x1="696" y1="290" x2="736" y2="290" marker-end="url(#a2)"/>
+          <text class="edge-t" x="716" y="284" text-anchor="middle">실패</text>
+
+          <!-- row 4 -->
+          <rect class="n" x="572" y="340" width="116" height="36" rx="3"/>
+          <text class="lbl" x="630" y="363" text-anchor="middle">NEXT</text>
+          <line class="e" x1="632" y1="308" x2="632" y2="340" marker-end="url(#a2)"/>
+          <text class="edge-t" x="642" y="328">성공</text>
+          <path class="e" d="M784,308 L784,358 L688,358" marker-end="url(#a2)"/>
+          <text class="edge-t" x="794" y="330">운영자가</text>
+          <text class="edge-t" x="794" y="344">손으로 넣음</text>
+
+          <path class="e" d="M572,358 L36,358"/>
+          <text class="edge-t" x="300" y="352" text-anchor="middle">남은 항목 있음</text>
+
+          <!-- closing -->
+          <line class="e" x1="630" y1="376" x2="630" y2="430" marker-end="url(#a2)"/>
+          <text class="edge-t" x="640" y="410">마지막 항목</text>
+          <rect class="n" x="572" y="430" width="116" height="36" rx="3"/>
+          <text class="lbl" x="630" y="453" text-anchor="middle">COMPLETE</text>
+          <rect class="n" x="712" y="430" width="84" height="36" rx="3"/>
+          <text class="lbl" x="754" y="453" text-anchor="middle">END</text>
+          <line class="e" x1="688" y1="448" x2="712" y2="448" marker-end="url(#a2)"/>
+        </svg>
+      </div>
+      <figcaption><b>강조된 경로가 유일하게 로봇을 움직인다.</b> <code>CORRECT</code>를 거치지 않고 <code>ROBOT_TURN</code>에 도달하는 간선이 없다. 오답과 중복은 촉진 위계만 한 단 올리고 같은 요청으로 돌아가며, 로봇이 실패해도 운영자가 손으로 넣고 <code>NEXT</code>로 합류해 아이는 성공으로 끝낸다. <code>PAUSED</code>는 어느 상태에서든 진입하고 그 턴을 처음부터 다시 시작한다.</figcaption>
+    </figure>
+  </section>
+
+  <!-- ═══════════════ 지각 ═══════════════ -->
+  <section>
+    <div class="head">
+      <p class="eyebrow">지각</p>
+      <h2>변화가 없으면 호출도 없다</h2>
+    </div>
+
+    <p>아이가 여러 번 물건을 올려놓는 상황에서 가장 위험한 실패는 무한 재판정이다. 오답 물건이 책상에 남아 있으면 <code>WAIT_CHILD</code>로 돌아올 때마다 같은 판정을 반복하게 된다. 값싼 프레임 차분을 게이트로 두면 이 문제가 사라진다.</p>
+
+    <figure>
+      <div class="canvas">
+        <svg viewBox="0 0 916 214" role="img" aria-label="프레임 차분이 임계값을 넘고 3틱 연속 정지했을 때만 VLM을 한 번 호출하는 변화 구동 감시 루프">
+          <defs>
+            <marker id="a3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+              <path d="M0,1 L9,5 L0,9 z" fill="currentColor" opacity="0.62"/>
+            </marker>
+          </defs>
+
+          <rect class="n" x="16" y="76" width="112" height="44" rx="3"/>
+          <text class="lbl" x="72" y="94" text-anchor="middle">씬 프레임</text>
+          <text class="lbl-s" x="72" y="110" text-anchor="middle">3Hz 폴링</text>
+
+          <rect class="n" x="192" y="76" width="140" height="44" rx="3"/>
+          <text class="lbl" x="262" y="94" text-anchor="middle">차분 ≥ 2.5</text>
+          <text class="lbl-s" x="262" y="110" text-anchor="middle">정지 장면 최대 2.42</text>
+
+          <rect class="n" x="396" y="76" width="124" height="44" rx="3"/>
+          <text class="lbl" x="458" y="94" text-anchor="middle">3틱 연속 정지</text>
+          <text class="lbl-s" x="458" y="110" text-anchor="middle">손이 빠졌다</text>
+
+          <rect class="n-acc" x="584" y="76" width="120" height="44" rx="3"/>
+          <text class="lbl" x="644" y="94" text-anchor="middle" fill="var(--accent)">VLM 1회</text>
+          <text class="lbl-s" x="644" y="110" text-anchor="middle">≈1.26초</text>
+
+          <rect class="n" x="744" y="52" width="156" height="36" rx="3"/>
+          <text class="lbl" x="822" y="75" text-anchor="middle">none → 무장 복귀</text>
+          <rect class="n" x="744" y="108" width="156" height="36" rx="3"/>
+          <text class="lbl" x="822" y="131" text-anchor="middle">물체 → child_placed</text>
+
+          <line class="e" x1="128" y1="98" x2="192" y2="98" marker-end="url(#a3)"/>
+          <line class="e" x1="332" y1="98" x2="396" y2="98" marker-end="url(#a3)"/>
+          <text class="edge-t" x="364" y="92" text-anchor="middle">변화</text>
+          <line class="e" x1="520" y1="98" x2="584" y2="98" marker-end="url(#a3)"/>
+          <text class="edge-t" x="552" y="92" text-anchor="middle">안정</text>
+          <path class="e" d="M704,98 L724,98 L724,70 L744,70" marker-end="url(#a3)"/>
+          <path class="e" d="M704,98 L724,98 L724,126 L744,126" marker-end="url(#a3)"/>
+
+          <path class="e-dash" d="M262,120 C262,178 72,178 72,120" marker-end="url(#a3)"/>
+          <text class="edge-t" x="167" y="198" text-anchor="middle">변화 없음 — VLM 호출 0건</text>
+
+          <path class="e-dash" d="M822,52 L822,32 L72,32 L72,76" marker-end="url(#a3)"/>
+          <text class="edge-t" x="447" y="26" text-anchor="middle">아이가 치웠다 — 다시 무장</text>
+        </svg>
+      </div>
+      <figcaption><b>임계값 2.5는 측정해서 정한 값이다.</b> 정지 장면의 차분 최댓값이 2.42였고, 34프레임에서 오탐 0건이었다. 처음 잡았던 3.5는 노이즈 바닥과 너무 가까웠다. 오답 물건이 그대로 남아 있으면 차분이 임계값을 넘지 않으므로 <b>호출 자체가 발생하지 않는다</b> — 재판정 문제가 별도 코드 없이 해소된다. 세션당 VLM 호출은 8~12회 수준이고, 판정 결과는 캐시되어 <code>judge_request</code>가 같은 프레임을 두 번 찍지 않는다.</figcaption>
+    </figure>
+
+    <div class="rules">
+      <div class="rule">
+        <h3>판정 (<span class="m">judge</span>)</h3>
+        <p><code>WAIT_CHILD</code>에서만. 안정된 변화마다 한 번 호출하고, <code>none</code>이면 아이가 치운 것이므로 <code>child_placed</code>를 내지 않는다.</p>
+      </div>
+      <div class="rule">
+        <h3>경계 (<span class="m">guard</span>)</h3>
+        <p><code>ROBOT_TURN</code> 중. 프레임 차분은 팔과 물건을 가르지 못하므로 <b>판정을 포기하고</b> 턴당 운영자 알림 1회로 낮췄다. 이송 중 자동 중단은 물건을 떨어뜨린다.</p>
+      </div>
+      <div class="rule">
+        <h3>정체 (<span class="m">stall</span>)</h3>
+        <p>20초 무변화면 같은 요청 발화를 다시 재생하고 위계를 올린다. 사다리를 넘어 3회 더 반복되면 <code>stall_saturated</code>로 운영자를 부른다.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ 안전 ═══════════════ -->
+  <section>
+    <div class="head">
+      <p class="eyebrow">안전</p>
+      <h2>규약이 아니라 타입으로 막은 것들</h2>
+    </div>
+
+    <p>아래 다섯은 코드 리뷰로 지키는 규칙이 아니다. 위반하려면 타입이나 프로세스 경계를 뚫어야 한다.</p>
+
+    <dl>
+      <div class="row">
+        <dt>ALLOWED_SENDERS</dt>
+        <dd><b>VLM은 로봇에게 말할 수 없다.</b> 이벤트마다 허용 발신 역할이 <code>frozenset</code>으로 박혀 있고, <code>robot_cmd</code>의 발신자 집합에 <code>Role.VLM</code>이 없다. 판정은 허브를 거쳐 상태 전이가 되어야만 로봇에 닿는다.</dd>
+      </div>
+      <div class="row">
+        <dt>순수 상태 머신</dt>
+        <dd>I/O도 시계도 없다. 시각은 주입되고, 반환값은 <code>(다음 상태, 효과 목록)</code>뿐이다. <b>서버 없이 전 경로를 테스트</b>할 수 있고, 로그를 그대로 재생해 사후 분석이 가능하다.</dd>
+      </div>
+      <div class="row">
+        <dt>관절 봉투</dt>
+        <dd>GR00T 전처리기가 min/max 정규화 뒤 <code>clip_outliers</code>로 조용히 잘라내므로, 봉투 밖 상태가 <b>엉뚱한 동작으로 뭉개져</b> 들어간다. 매 틱(0.2초 스로틀) 16축을 검사하고 위반이면 즉시 중단한다. 여유는 2°다 — 턴 시작의 <code>right_gripper</code>가 봉투 최솟값에서 0.16°밖에 안 남는다.</dd>
+      </div>
+      <div class="row">
+        <dt>카메라 단일 소유</dt>
+        <dd>카메라를 여는 프로세스는 <code>robot_bridge</code> 하나다. 한 대라도 빠지면 <code>camera_health.all_ok=false</code>가 <b>새 턴을 막는다</b>. VLM은 HTTP로만 프레임을 본다.</dd>
+      </div>
+      <div class="row">
+        <dt>고정 대본</dt>
+        <dd>인트로·요청·정답·오답·아웃트로 17줄은 <b>사전 렌더링된 파일</b>이고 TTS를 거치지 않는다. 예측 가능성(TEACCH)이 흔들리지 않고, <code>prompt_level</code> 로그가 무엇이 언제 나갔는지 정확히 보존한다. 실시간 합성은 잡담 응답에만 쓴다.</dd>
+      </div>
+    </dl>
+  </section>
+
+  <!-- ═══════════════ 상수 ═══════════════ -->
+  <section>
+    <div class="head">
+      <p class="eyebrow">상수</p>
+      <h2>추정이 아니라 측정에서 나온 숫자들</h2>
+    </div>
+
+    <p>설계의 거의 모든 임계값이 실제 데이터셋이나 실제 API 호출에서 나왔다. 아래에서 <span class="pill p-warn">미측정</span> 표시가 붙은 둘은 시연 전에 반드시 재야 한다.</p>
+
+    <div class="tw">
+      <table>
+        <thead>
+          <tr><th>값</th><th>숫자</th><th>어디서 나왔나</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>로봇 턴 길이</td><td class="num">46.3초</td><td>60에피소드 평균 (중앙 45.9 · 최대 60.5). 30fps 텔레옵 녹화 시간</td></tr>
+          <tr><td><code>robot_deadline_ms</code></td><td class="num">69,500</td><td>46.3 × 1.5. <span class="pill p-warn">미측정</span> 실행은 추론 지연으로 최대 2배까지 늘 수 있다 — 드라이런 벽시계 × 1.3으로 교체할 것</td></tr>
+          <tr><td>움직임 임계값</td><td class="num">2.5</td><td>정지 장면 차분 최댓값 2.42, 34프레임 오탐 0건</td></tr>
+          <tr><td>관절 봉투 16축</td><td class="num">Δ 0.000000</td><td>체크포인트 <code>observation.state.min/max</code>와 소수점까지 일치</td></tr>
+          <tr><td>봉투 여유</td><td class="num">2.0°</td><td>턴 시작 <code>right_gripper</code>의 실측 여유 0.16°에서 역산</td></tr>
+          <tr><td>홈 포즈 검증</td><td class="num">—</td><td><span class="pill p-warn">미측정</span> 오른팔·그리퍼 <code>observation.state</code>가 새 봉투 안에 드는지</td></tr>
+          <tr><td>판정 정확도</td><td class="num">20 / 20</td><td>새 씬 프레임, gpt-4o, 프롬프트 무수정</td></tr>
+          <tr><td>사후 확인</td><td class="num">15 / 15</td><td>가림 규칙(<code>hidden</code>) 추가 후. 위험한 오답 0건</td></tr>
+          <tr><td>판정 지연</td><td class="num">1.26초</td><td>gpt-4o 중앙값. gemini는 같은 정확도에 4.10초</td></tr>
+          <tr><td><code>judge_timeout_ms</code></td><td class="num">15,000</td><td>판정 실측 최대 14.1초</td></tr>
+          <tr><td><code>verify_timeout_ms</code></td><td class="num">20,000</td><td>재시도 루프 최악 10.3초. 10초였을 때 <b>성공한 로봇이 실패 처리</b>됐다</td></tr>
+          <tr><td>턴 단계 경계</td><td class="num">0.27 / 0.52 / 0.92</td><td>그리퍼 채널에서 뽑은 <code>opening → reaching → placing → closing</code> 시간 분포</td></tr>
+          <tr><td>세션당 API 비용</td><td class="num">$0.025</td><td>gpt-4o, 3항목·12콜. 100세션 $2.46. 토큰 수는 실측, 단가는 확인 필요</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═══════════════ 음성 ═══════════════ -->
+  <section>
+    <div class="head">
+      <p class="eyebrow">음성</p>
+      <h2>귀는 열고, 입은 고정한다</h2>
+    </div>
+
+    <p>아이에게 버튼을 누르라고 요구하지 않는다. 에너지 VAD가 상시 듣고, 나온 말은 의도로 분류되어 <b>이미 존재하는 이벤트</b>에 매핑된다. 음성이 하나도 안 와도 세션은 완결된다 — 가산적으로 붙는 층이다.</p>
+
+    <div class="tw">
+      <table>
+        <thead>
+          <tr><th>아이가 한 말</th><th>의도</th><th>시스템이 하는 일</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>"다시 말해줘", "뭐라고?"</td><td class="who">REPEAT_REQUEST</td><td>같은 요청 발화 재생. <b>촉진 위계는 올리지 않는다</b> — 못 들은 것과 모르는 것은 다르다</td></tr>
+          <tr><td>"모르겠어"</td><td class="who">DONT_KNOW</td><td>위계 한 단 상승 (<code>verbal → hint → model</code>)</td></tr>
+          <tr><td>"그만", "쉬고 싶어"</td><td class="who">BREAK</td><td><code>PAUSED</code> 진입. 재개하면 그 턴을 처음부터</td></tr>
+          <tr><td>"했어", 그 외</td><td class="who">DONE · OTHER</td><td>로그만. 진행 신호로 쓰지 않는다</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="rules">
+      <div class="rule">
+        <h3>에코 차단</h3>
+        <p>재프롬프트 중에는 마이크를 닫는다. 로봇 발화를 되받아 자기 말에 반응하는 경로를 없애고, <code>WAIT_CHILD + advance</code>에서 다시 연다.</p>
+      </div>
+      <div class="rule">
+        <h3>오디오는 태블릿에서</h3>
+        <p>17줄 전부 태블릿의 사전 렌더링 wav로 재생한다. Chrome 자동재생 정책 때문에 <b>설정 화면의 탭 한 번</b>이 필수 제스처다.</p>
+      </div>
+      <div class="rule">
+        <h3>진행 신호</h3>
+        <p>46초 무발화 구간에는 <code>progress_tick</code>이 초당 한 번 <code>ratio</code>와 <code>turn_phase</code>를 실어 보낸다. 태블릿은 스톱워치가 아니라 단계를 보여준다.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ 측정 ═══════════════ -->
+  <section>
+    <div class="head">
+      <p class="eyebrow">측정</p>
+      <h2>과제분석 지표 17개 중 14개가 자동으로 쌓인다</h2>
+    </div>
+
+    <p>Ran의 과제분석 문서가 요구하는 행동지표를 로그에서 바로 뽑을 수 있게 이벤트를 설계했다. 초기 로그가 <code>%H:%M:%S</code> 초 해상도라 시간 기반 지표 5개가 통째로 무너져 있었다 — 지금은 밀리초 ISO 타임스탬프에 세션 시작 기준 <code>t_ms</code> 오프셋이 함께 붙는다.</p>
+
+    <dl>
+      <div class="row">
+        <dt>탐색 시간</dt>
+        <dd><code>search_ms</code> — 요청 발화 종료부터 물건이 놓일 때까지. <b>VLM 지연을 분리했다</b>: 초기 구현은 판정 시간이 섞여 4.6초가 부풀려져 있었다. <code>judge_ms</code>는 따로 기록한다.</dd>
+      </div>
+      <div class="row">
+        <dt>촉진 횟수</dt>
+        <dd><code>prompt_given</code> 이벤트에 <code>prompt_level</code>이 실린다. 위계별 분해가 사후에 가능하므로, 촉진 위계를 유지하면서도 "최소 오류 신호" 해석을 버리지 않는다.</dd>
+      </div>
+      <div class="row">
+        <dt>선택적 주의</dt>
+        <dd><code>on_target</code> — 호명된 바로 그 하나를 골랐는지. <code>strict_order: true</code>와 함께 오선택률을 그대로 계산할 수 있다.</dd>
+      </div>
+      <div class="row">
+        <dt>재호명 횟수</dt>
+        <dd><code>child_utterance</code>의 <code>REPEAT_REQUEST</code> 카운트. 음성 층이 꺼져 있으면 이 지표만 비고 나머지는 그대로 쌓인다.</dd>
+      </div>
+      <div class="row">
+        <dt>남은 3개</dt>
+        <dd>시선·정서·자발 발화의 질 — 자동 수집 대상이 아니다. 관찰자 기록으로 남긴다.</dd>
+      </div>
+    </dl>
+  </section>
+
+  <!-- ═══════════════ 미결 ═══════════════ -->
+  <section>
+    <div class="head">
+      <p class="eyebrow">미결</p>
+      <h2>시연 전에 사람이 해야 하는 것</h2>
+    </div>
+
+    <div class="rules">
+      <div class="rule">
+        <h3><span class="pill p-stop">차단</span> 홈 포즈 실측</h3>
+        <p>오른팔 7축과 그리퍼가 새 봉투 안에 드는지. <code>right_gripper ≤ −17.3</code>, <code>right_joint_7 ≥ −6.6</code>. 벗어나면 preflight가 매 턴 추론을 막는다.</p>
+      </div>
+      <div class="rule">
+        <h3><span class="pill p-stop">차단</span> 드라이런 1회</h3>
+        <p>벽시계 턴 시간을 재서 <code>robot_deadline_ms</code>를 그 값 × 1.3으로 교체. 69,500은 데이터셋 시간에서 나온 임시 하한이다.</p>
+      </div>
+      <div class="rule">
+        <h3><span class="pill p-warn">필요</span> 발화 파일 11개</h3>
+        <p>재녹음 2건(<code>intro-4</code>, <code>outro-1</code> — 지퍼 문구 제거), 신규 9건. 지금은 자막만 나가고 2.2초 뒤 넘어간다. Humelo 키는 들어와 있다.</p>
+      </div>
+      <div class="rule">
+        <h3><span class="pill p-warn">필요</span> 정책 코드 백업</h3>
+        <p><code>groot_frozen_bf16</code>이 leap 머신에만 있고 추적되지 않는다. 시연을 좌우하는 코드가 한 대에 있다.</p>
+      </div>
+      <div class="rule">
+        <h3><span class="pill p-idle">대기</span> 터널 기동</h3>
+        <p><code>cloudflared</code> 설치와 <code>npm run deploy</code>. Cloudflare 로그인이 필요해 사람이 해야 한다. 실패하면 LAN 직결이 폴백이다.</p>
+      </div>
+      <div class="rule">
+        <h3><span class="pill p-idle">대기</span> Ran의 판단</h3>
+        <p>46.3초 × 3회의 무발화 구간이 상호작용으로 적정한가. 단계 표시로 완화했지만 설계 판단이 필요하다.</p>
+      </div>
+    </div>
+  </section>
+
+  <p class="foot">
+    openarm-specialedu @ a012c91 · orchestrator 16 phases / 7 roles<br>
+    측정 기준: nuedive_test_60epi_new_20260824_182026 · GR00T N1.7-3B · gpt-4o
+  </p>
+
+</div>

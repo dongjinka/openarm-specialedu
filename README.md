@@ -5,6 +5,7 @@
 
 로봇은 작업 수행 기계가 아니라 **상호작용 촉진자**다. 물리 조작은 사회적 상호작용의 매개다.
 
+- **전체 구조: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)** ← 프로세스·상태·실측 상수 조감도
 - 설계 원본: [`docs/CLAUDE_CODE_CONTEXT.md`](docs/CLAUDE_CODE_CONTEXT.md) (보존)
 - **이벤트 계약: [`CONTRACT.md`](CONTRACT.md)** ← 실측 데이터에 맞춰 교정한 판. 여기가 기준이다.
 
