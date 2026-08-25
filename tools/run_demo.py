@@ -65,9 +65,15 @@ SESSION_API = "https://openarm-special-web.neudive7.workers.dev/api/session"
 LOG_DIR = pathlib.Path("/tmp/demo")
 
 #: 기동 중 이 문자열이 보이면 즉시 실패로 처리한다. 조용히 넘어가면 원인이 안 보인다.
+#:
+#: **성공 로그에도 걸리지 않는 문자열이어야 한다.** 예전에 여기 `"정책 타입"` 이
+#: 있었는데, 검사를 통과했을 때 나오는 `정책 타입 groot_frozen_bf16 등록 확인` 에
+#: 그대로 걸려서 멀쩡히 뜬 브리지를 실패로 죽였다(2026-08-26 실측). 실패 쪽 문구는
+#: `정책 타입 '...' 가 등록돼 있지 않다` 이므로 뒷부분으로 잡는다.
 FATAL_PATTERNS = (
     "GR00T 롤아웃 컨텍스트 구성 실패",
-    "정책 타입",
+    "가 등록돼 있지 않다",
+    "Handshake failed",
     "Traceback",
 )
 
@@ -441,13 +447,22 @@ def main() -> None:
 
         monitor(services)
 
-    except SystemExit:
-        raise
-    except Exception as exc:  # noqa: BLE001
-        print(c(f"\n  ❌ {type(exc).__name__}: {exc}", "31"))
+    except BaseException as exc:  # noqa: BLE001
+        # **어떤 이유로 빠져나가든 띄운 것을 정리하고 나간다.**
+        #
+        # 예전에는 `except SystemExit: raise` 로 그냥 통과시켰는데, `die()` 가
+        # SystemExit 을 던지므로 기동 중 판정이 한 번 어긋나면 로봇 프로세스가
+        # CAN 과 카메라를 잡은 채 고아로 남았다(2026-08-26 실측 — 팔이 홈에서
+        # 토크가 걸린 채 방치됐다). 다음 기동은 그 잔여 프로세스 때문에 다시
+        # 실패하고, 그게 어젯밤 CAN 버스 충돌 사고와 같은 계열이다.
+        #
+        # `shutdown()` 이 이미 정리한 뒤 SystemExit(0) 을 던지는 경로도 여기를
+        # 지나지만, `stop()` 은 살아 있지 않으면 즉시 돌아오므로 두 번 불러도 된다.
+        if not isinstance(exc, SystemExit):
+            print(c(f"\n  ❌ {type(exc).__name__}: {exc}", "31"))
         for s in reversed(services):
-            s.stop()
-        raise SystemExit(1) from exc
+            s.stop(grace=40.0 if s.name == "robot_bridge" else 8.0)
+        raise
 
 
 if __name__ == "__main__":
