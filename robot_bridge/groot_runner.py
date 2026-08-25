@@ -363,9 +363,12 @@ class GrootBackend:
     name = "groot"
 
     def __init__(self, policy_path: str, device: str = "cuda", *, robot_cfg=None,
-                 fps: float = 30.0) -> None:
+                 fps: float = 30.0, chunk_size: int | None = None,
+                 n_action_steps: int | None = 6) -> None:
         self.policy_path = policy_path
         self.device = device
+        self.chunk_size = chunk_size
+        self.n_action_steps = n_action_steps
         self.robot_cfg = robot_cfg
         self.fps = fps
         #: 우리가 소유한다 — abort · pause · camera_health 가 지나가는 유일한 통로.
@@ -418,7 +421,50 @@ class GrootBackend:
 
         # CLI 는 __post_init__ 이 --policy.path 로 채운다. 라이브러리 호출은
         # parser.wrap() 을 안 거치므로 직접 넣는다.
+        #
+        # 액션 청크는 **두 개의 다른 손잡이**다. 이름이 비슷해 섞어 쓰기 쉽다.
+        #   chunk_size     : 모델이 한 번에 예측하는 미래 액션 개수 (학습된 호라이즌)
+        #   n_action_steps : 그중 몇 개를 실행하고 다시 추론할지 (개루프 구간)
+        # 체크포인트는 둘 다 40 이라, 40개를 예측하고 40개를 전부 눈 감고 실행한다 —
+        # 30Hz 기준 1.33초, 루프가 10Hz 로 떨어지면 4초다.
+        #
+        # **chunk_size 는 체크포인트 값(40)을 그대로 둔다.** 사용자 실측으로 40 이
+        # 가장 빠르고 정확했다. 학습된 호라이즌이기도 하다.
+        #
+        # **n_action_steps 만 6 으로 줄인다.** 40개를 예측하되 6개만 실행하고 다시
+        # 관측한다(receding horizon). 40개를 전부 실행하면 1.33초(루프가 10Hz 면 4초)
+        # 동안 눈을 감는데, 물체 앞 마지막 몇 cm 는 시각 피드백으로 서보해야 하는
+        # 구간이라 거기서 잡지 못한다.
+        #
+        # 실측 근거(2026-08-26 05:24, --no-vlm): 왼쪽 그리퍼는 명령 -3.6 으로 가방을
+        # 제대로 쥐었는데(실측 +5.1) 오른쪽은 25초 내내 명령이 -65 로 열린 채였다.
+        # 구동이 아니라 정책이 닫으라고 하지 않는 상태였고, 봉투 위반도 없었다.
+        # 같은 로그의 loop 저하 빈도(5초당 4~6회)도 40틱=1.33초마다 도는 3B forward
+        # 와 일치한다 — VLM 을 꺼도 그대로였으니 락 경합이 아니라 이것이었다.
+        #
+        # 대가: 모델이 6.7배 자주 돌아 평균 루프 레이트가 떨어지고 `loop under target`
+        # 도 잦아진다. **그건 닫힌 루프의 비용이지 회귀가 아니다** — 이 주석이 없으면
+        # 다음 사람이 되돌린다.
+        #
+        # ⚠️ `from_pretrained(..., chunk_size=30)` 처럼 넘기면 **조용히 무시된다.**
+        # 그 함수는 `policy_kwargs` 에서 `cli_overrides` 만 꺼내 쓰고 나머지는 버린다
+        # (`lerobot/configs/policies.py:234-236`). 값을 넘겨 놓고 40/40 으로 도는 것을
+        # 눈치챌 방법이 없다 — 그래서 로드 뒤에 속성을 직접 세우고, 적용된 값을 반드시
+        # 찍는다. 같은 방식으로 값을 바꿨다고 믿고 한 비교 실험은 전부 40/40 이었을
+        # 수 있으므로, 이 로그 없이는 어떤 청크 실험도 신뢰할 수 없다.
         policy_cfg = PreTrainedConfig.from_pretrained(self.policy_path)
+        before = (policy_cfg.chunk_size, policy_cfg.n_action_steps)
+        # 0 이하도 "건드리지 않는다" 로 본다 — 명령줄에서 끄기 쉽게.
+        if self.chunk_size and self.chunk_size > 0:
+            policy_cfg.chunk_size = self.chunk_size
+        if self.n_action_steps and self.n_action_steps > 0:
+            policy_cfg.n_action_steps = min(self.n_action_steps, policy_cfg.chunk_size)
+        logger.info(
+            "액션 청크: chunk_size=%d n_action_steps=%d (체크포인트 기본 %d/%d) — "
+            "개루프 구간 %.2f초 @%.0ffps",
+            policy_cfg.chunk_size, policy_cfg.n_action_steps, *before,
+            policy_cfg.n_action_steps / self.fps, self.fps,
+        )
         # 체크포인트 config.json 의 `pretrained_path` 는 None 이고 from_pretrained 도
         # 채우지 않는다. 그런데 context._load_pretrained_policy 가 **이 필드로**
         # 가중치를 찾는다 — 비워 두면 transformers 가 경로 None 으로 허브를 뒤지다가
@@ -477,6 +523,28 @@ class GrootBackend:
                 return to_jpeg(obs[key])
         raise RuntimeError(f"씬 카메라를 못 찾았다: {sorted(obs)[:12]}")
 
+    def _reset_inference(self) -> None:
+        """턴을 시작하기 전에 정책의 액션 큐를 비운다.
+
+        `select_action` 은 큐가 빌 때만 모델을 다시 부르고, 그 사이에는 이전에
+        뽑아 둔 청크를 하나씩 꺼내 쓴다(`modeling_groot.py:527-530`). 턴이 끝날 때
+        큐가 비어 있으리라는 보장이 없으므로, 비우지 않으면 **다음 턴의 첫 몇
+        틱이 지난 턴의 장면에서 뽑은 액션**으로 시작한다. 실패 뒤 `_recover_to_home`
+        으로 자세까지 달라진 경우에는 더 나쁘다.
+
+        `BaseStrategy.run` 이 부르는 `engine.resume()` 은 sync 엔진에서 no-op 이라
+        이 일을 대신해 주지 않는다. 명시적으로 부른다.
+
+        상류 구조가 바뀌어 경로가 사라지면 조용히 넘어간다 — 큐가 안 비워진다고
+        팔이 위험해지지는 않고, 여기서 예외를 내면 턴 자체가 시작되지 않는다.
+        """
+        engine = getattr(getattr(self.ctx, "policy", None), "inference", None)
+        reset = getattr(engine, "reset", None)
+        if callable(reset):
+            reset()
+        else:
+            logger.warning("추론 엔진 reset 경로를 못 찾았다 — 이전 턴의 액션 큐가 남을 수 있다")
+
     # ── robot_cmd 1건 = open_place_close 1 사이클 ──────────────────────────
     async def execute(self, cmd_id: str, target: str | None, deadline_ms: int,
                       on_progress: ProgressCb) -> RobotOutcome:
@@ -485,6 +553,7 @@ class GrootBackend:
 
         self.shutdown.clear()               # 이전 턴의 중단 신호를 지운다
         self._aborted.discard(cmd_id)
+        self._reset_inference()             # 이전 턴의 액션 큐를 버린다
         self.ctx.runtime.cfg.duration = deadline_ms / 1000.0
 
         violations: list[str] = []

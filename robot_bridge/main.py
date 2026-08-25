@@ -203,7 +203,9 @@ def build_backend(args) -> RobotBackend:
         if not args.robot_config:
             raise SystemExit("--real 에는 --robot-config 가 필요하다 (로봇·카메라 3대 설정 JSON)")
         return GrootBackend(args.policy_path, args.device,
-                            robot_cfg=load_robot_config(args.robot_config), fps=args.fps)
+                            robot_cfg=load_robot_config(args.robot_config), fps=args.fps,
+                            chunk_size=args.chunk_size,
+                            n_action_steps=args.n_action_steps)
     return SimBackend(frames_dir=args.frames_dir, duration_ms=args.sim_ms,
                       realistic=args.realistic, fail_rate=args.fail_rate, seed=args.seed)
 
@@ -226,6 +228,13 @@ def main() -> None:
     p.add_argument("--robot-config", default=None,
                    help="로봇·카메라 3대 설정 JSON 경로 (--real 필수)")
     p.add_argument("--fps", type=float, default=30.0, help="제어 루프 목표 레이트")
+    p.add_argument("--chunk-size", type=int, default=None,
+                   help="모델이 한 번에 예측하는 액션 개수. 비우면 체크포인트 값(40) — "
+                        "실측으로 40이 가장 좋았으므로 기본은 건드리지 않는다")
+    p.add_argument("--n-action-steps", type=int, default=6,
+                   help="예측한 것 중 몇 개를 실행하고 다시 관측할지(개루프 구간). "
+                        "체크포인트 기본은 40이라 1.33초를 눈 감고 간다 — 물체 앞에서 "
+                        "그리퍼가 안 닫히던 원인. 0 이하를 주면 체크포인트 값을 쓴다")
     p.add_argument("--device", default="cuda")
     p.add_argument("--frames-dir", default=None,
                    help="--sim 에서 /frame/latest 로 내보낼 이미지 디렉터리 (전 구간 리허설용)")
