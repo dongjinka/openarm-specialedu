@@ -231,11 +231,24 @@ class GrootBackend:
 
     # ── 기동 시 1회. 모델은 상주한다 ────────────────────────────────────────
     async def load(self) -> None:
+        """**메인 스레드에서** 돈다. 워커 스레드로 넘기면 안 된다.
+
+        `build_rollout_context` 가 `robot.connect()` 를 부르고, 그 안의 `ArmSession`
+        이 SIGTERM 핸들러를 등록한다(`arm_session.py`). 파이썬은 메인 스레드가 아니면
+        `signal.signal` 을 거부하므로 `asyncio.to_thread` 로 감싸면
+        `ValueError: signal only works in main thread` 로 죽는다.
+
+        그 핸들러는 장식이 아니다 — `finally` 블록이 잡지 못하는 SIGTERM 에서도 팔을
+        내리고 토크를 푸는 유일한 경로다. 우회하지 말고 메인 스레드를 내준다.
+
+        기동 시 1회뿐이고 이때는 아직 다른 일이 없으므로, 30초 남짓 이벤트 루프가
+        멈추는 것은 감수한다.
+        """
         async with self._lock:
             if self.strategy is not None:
                 return
             try:
-                await asyncio.to_thread(self._load_blocking)
+                self._load_blocking()
             except Exception as exc:  # noqa: BLE001
                 self.error = f"{type(exc).__name__}: {exc}"
                 logger.exception("GR00T 롤아웃 컨텍스트 구성 실패")
@@ -256,11 +269,19 @@ class GrootBackend:
                 "카메라 3대(follower_d455f · left_wrist · right_wrist) 설정을 포함해야 한다."
             )
 
+        # CLI 는 __post_init__ 이 --policy.path 로 채운다. 라이브러리 호출은
+        # parser.wrap() 을 안 거치므로 직접 넣는다.
+        policy_cfg = PreTrainedConfig.from_pretrained(self.policy_path)
+        # 체크포인트 config.json 의 `pretrained_path` 는 None 이고 from_pretrained 도
+        # 채우지 않는다. 그런데 context._load_pretrained_policy 가 **이 필드로**
+        # 가중치를 찾는다 — 비워 두면 transformers 가 경로 None 으로 허브를 뒤지다가
+        # "None is not a local folder" 로 죽는다. 정책 로드 단계라 하드웨어는 아직
+        # 붙기 전이다(정책 → 전처리기 → 하드웨어 순).
+        policy_cfg.pretrained_path = self.policy_path
+
         cfg = RolloutConfig(
             robot=self.robot_cfg,
-            # CLI 는 __post_init__ 이 --policy.path 로 채운다. 라이브러리 호출은
-            # parser.wrap() 을 안 거치므로 직접 넣는다.
-            policy=PreTrainedConfig.from_pretrained(self.policy_path),
+            policy=policy_cfg,
             strategy=BaseStrategyConfig(),      # 녹화 없는 자율 롤아웃
             inference=SyncInferenceConfig(),    # ← sync. RTC 금지: 겹침보정이 그리퍼
                                                 #    릴리스 8프레임을 삼킨다 (history/035)
@@ -326,19 +347,54 @@ class GrootBackend:
         except Exception as exc:  # noqa: BLE001
             elapsed_ms = int((time.monotonic() - started) * 1000)
             logger.exception("롤아웃 실행 중 예외")
+            await self._recover_to_home(f"{type(exc).__name__}: {exc}")
             return RobotOutcome(False, "aborted", elapsed_ms, f"{type(exc).__name__}: {exc}")
         elapsed_ms = int((time.monotonic() - started) * 1000)
 
         if violations:
-            return RobotOutcome(False, "aborted", elapsed_ms, f"preflight: {violations[0]}")
+            detail = f"preflight: {violations[0]}"
+            await self._recover_to_home(detail)
+            return RobotOutcome(False, "aborted", elapsed_ms, detail)
         if cmd_id in self._aborted:
             self._aborted.discard(cmd_id)
+            await self._recover_to_home("중단 요청")
             return RobotOutcome(False, "aborted", elapsed_ms, "중단 요청")
         if elapsed_ms >= deadline_ms:
+            await self._recover_to_home("데드라인 초과")
             return RobotOutcome(False, "timeout", elapsed_ms, "데드라인 초과")
         # 여기서 내는 success 는 "루프가 끝까지 돌았다" 는 뜻이지 물리적 성공이 아니다.
         # 물건이 실제로 가방에 들어갔는지는 ROBOT_VERIFY 의 VLM 이 정한다.
+        # 정상 종료는 학습 동작의 자연스러운 끝점이라 홈으로 되감지 않는다 — 그 자체가
+        # 검증 안 된 궤적을 매 항목마다 추가로 태우는 셈이라 아래 위험이 매번 반복된다.
         return RobotOutcome(True, "verified", elapsed_ms, "")
+
+    async def _recover_to_home(self, reason: str) -> None:
+        """실패한 턴 뒤 팔을 홈 자세로 되돌린다.
+
+        `StartGuard`(연결 시 `robot.connect()` 안에서 1회 생성)는 그 프로세스
+        생애의 **첫 틱에만** 시작 자세 불일치를 검사한다(`self._checked` 셋이
+        인스턴스 수명 동안 유지). 우리는 기동 시 1회 연결해 계속 상주하므로,
+        두 번째 `robot_cmd` 부터는 그 안전장치가 다시 돌지 않는다 — 팔이 사이클
+        중간(봉투 위반·타임아웃·중단)에 멈춘 채로 다음 명령을 받으면 아무도
+        그 간극을 확인하지 않는다. 여기서 명시적으로 되감아 다음 실행이 항상
+        알려진 자세에서 시작하게 한다.
+
+        `openarm_sciedu.py:_go_home()` 이 쓰는 검증된 스윕(`walk_to_home`)을
+        그대로 재사용한다 — 레이트 제한·클램프가 이미 들어 있고, 새 모션 계획을
+        짜지 않는다.
+
+        ⚠️ **알려진 한계**: 그 스윕의 우회 경로(`clearance_bulge`)는 "정지 자세 →
+        작업 자세"라는 **한 가지 전이**만 겨냥해 튜닝됐다(책상 모서리·몸통 기둥
+        회피). 사이클 **중간**(가방 위, 물건을 놓는 자세 등)에서 출발할 때도
+        같은 우회량을 쓰는데, 그 경로가 안전한지는 검증된 적이 없다. 실물 첫
+        시험은 사람이 지켜보며 진행한다.
+        """
+        logger.warning("실패(%s) 뒤 홈으로 복귀한다 — 다음 명령이 알려진 자세에서 시작하도록", reason)
+        try:
+            await asyncio.to_thread(self.ctx.hardware.robot_wrapper.inner._go_home)
+            logger.info("홈 복귀 완료")
+        except Exception:  # noqa: BLE001 — 복귀 실패로 백엔드 전체를 죽이지 않는다
+            logger.exception("홈 복귀 실패 — 팔이 마지막 위치에 멈춰 있다. 수동 확인이 필요하다")
 
     # ── robot_abort · pause · camera all_ok=false ─────────────────────────
     async def abort(self, cmd_id: str, reason: str) -> None:
