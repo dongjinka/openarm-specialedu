@@ -95,7 +95,7 @@ VLM 을 붙여 돌리려면 네 번째 터미널을 띄운다. 로봇 브릿지�
 씬 카메라를 나눠 주므로 그 주소를 준다.
 
 ```bash
-VLM_PROVIDER=openrouter OPENROUTER_API_KEY=... .venv/bin/python -m vlm_service.main --frames-url http://127.0.0.1:8081/frame/latest
+.venv/bin/python -m vlm_service.main --frames-url http://127.0.0.1:8081/frame/latest
 ```
 
 로봇 없이 감시·판정 전 구간을 돌려보려면 `--sim` 브릿지에 이미지 디렉터리를 준다.

@@ -13,7 +13,7 @@
 소리는 태블릿에서 난다. 그래서 파일은 태블릿의 정적 자산 폴더에 떨어진다 —
 `static/scenarios/toy-bag/audio/`. 빌드가 필요 없고 새로고침하면 바로 들린다.
 
-    export HUMELO_API_KEY=...
+    # 키는 .env 에 넣는다 (.env.example 참고)
     python tools/render_lines.py --profile <voice-pipeline>/tts/config/humelo_nana.json
     python tools/render_lines.py --profile ... --only robot_mistake --force
     python tools/render_lines.py --profile ... --include-human   # 목소리 통일
@@ -30,6 +30,10 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
+
+import openarm_env  # noqa: E402
+
+openarm_env.load()
 
 _VAR = re.compile(r"\$\{([A-Z_]+)\}")
 

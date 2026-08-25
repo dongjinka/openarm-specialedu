@@ -26,6 +26,11 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO))
+
+import openarm_env  # noqa: E402
+
+loaded = openarm_env.load()
 
 CORE = [("fastapi", "허브 서버"), ("uvicorn", "허브 서버"), ("pydantic", "이벤트 계약"),
         ("websockets", "스포크 클라이언트"), ("httpx", "VLM·STT 호출"), ("PIL", "프레임 처리")]
@@ -115,14 +120,18 @@ def main() -> int:
         print(f"  {OK if free else WARN}{port}  {who}{'' if free else '  — 이미 사용 중'}")
 
     print("\n환경변수")
-    for key, why, needed in (("OPENROUTER_API_KEY", "VLM 판정", True),
+    if loaded:
+        print(f"  ({REPO / '.env'} 에서 {len(loaded)}개 읽음)")
+    for key, why, needed in (("OPENAI_API_KEY", "VLM 판정", True),
                              ("VLM_PROVIDER", "백엔드 선택", False),
-                             ("CLOVA_SPEECH_SECRET", "STT (선택)", False)):
+                             ("OPENAI_MODEL", "비전 모델", False),
+                             ("CLOVA_SPEECH_SECRET", "STT (선택)", False),
+                             ("HUMELO_API_KEY", "TTS 사전 생성 (선택)", False)):
         have = bool(os.environ.get(key))
         mark = OK if have else (BAD if needed else WARN)
         print(f"  {mark}{key:22} {why}")
         if needed and not have:
-            problems.append(f"{key} 가 없다 — VLM 판정이 전부 실패한다")
+            problems.append(f"{key} 가 없다 — VLM 판정이 전부 실패한다.\n     cp .env.example .env 후 값을 채운다")
 
     print("\n시나리오·자산")
     scenario = REPO / "scenarios" / "minsu_playdate_v1.json"

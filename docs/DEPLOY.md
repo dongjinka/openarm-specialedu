@@ -49,7 +49,29 @@ rsync -av --exclude .venv --exclude logs --exclude .git \
 
 ---
 
-## 1. 환경 진단 (설치는 하지 않는다)
+## 1. API 키
+
+키는 저장소 루트의 `.env` 한 곳에 둔다. 네 프로세스가 같은 파일을 읽으므로 매번
+export 할 필요가 없고, 명령줄에 적어 셸 히스토리·`ps` 에 남기지 않아도 된다.
+
+```bash
+cp .env.example .env    # 그리고 값을 채운다
+```
+
+| 키 | 쓰는 곳 | 없으면 |
+|---|---|---|
+| `OPENAI_API_KEY` | VLM 물체 판정 | **판정이 전부 실패한다** |
+| `CLOVA_SPEECH_SECRET` | STT 음성 인식 | 듣기만 꺼진 채 세션은 돈다 |
+| `HUMELO_API_KEY` | TTS 발화 사전 생성 | 시연 중에는 필요 없다 (§2-b 에서만) |
+
+`.env` 는 `.gitignore` 에 있다. 이미 설정된 환경변수는 덮지 않으므로,
+한 값만 임시로 바꿔야 하면 `OPENAI_MODEL=... python -m ...` 이 그대로 이긴다.
+
+> ⚠️ **VLM 을 OpenAI 로 바꾸면 판정 정확도를 다시 재야 한다.** 기록된 20/20 · 10/10 은
+> gemini-3.7-flash 로 잰 값이고 프롬프트도 그 모델의 응답을 보며 다듬었다.
+> `tools/eval_vlm.py --labels eval/labels_45.csv` 로 재측정한 뒤에 그 숫자를 쓴다.
+
+## 2. 환경 진단 (설치는 하지 않는다)
 
 ```bash
 # 우리 venv 쪽
@@ -71,7 +93,7 @@ python3 -m venv .venv && .venv/bin/pip install -e ".[dev,voice]"
 
 ---
 
-## 2. 시연 전 실측 두 가지
+## 3. 시연 전 실측 두 가지
 
 **홈 포즈 봉투** — `right_gripper` 는 여유가 0.16° 뿐이다.
 
@@ -84,13 +106,12 @@ cd /home/leap/Documents/openarmsciedu && .venv/bin/python scripts/calibration/ho
 
 ---
 
-## 2-b. 발화 wav 를 미리 만든다
+## 3-b. 발화 wav 를 미리 만든다
 
 고정 대본은 **실행 중에 합성하지 않는다** — 한 문장에 약 5초가 걸리고, 매 회차 같은
 소리가 나야 하며, TTS 가 죽어도 세션이 돌아야 한다.
 
 ```bash
-export HUMELO_API_KEY=...
 .venv/bin/python tools/render_lines.py \
     --profile ../openarm-sciedu/voice-pipeline/tts/config/humelo_nana.json
 ```
@@ -101,7 +122,7 @@ export HUMELO_API_KEY=...
 
 파일은 태블릿 정적 자산 폴더로 떨어지므로 빌드가 필요 없고 새로고침하면 바로 들린다.
 
-## 3. 띄우는 순서
+## 4. 띄우는 순서
 
 순서가 중요하다. 허브가 먼저 떠야 스포크가 붙고, 로봇이 프레임을 내야 VLM 이 본다.
 
@@ -119,13 +140,12 @@ PYTHONPATH=~/specialedu /home/leap/Documents/openarmsciedu/.venv/bin/python -m r
 
 ```bash
 # ③ VLM — 판정 + 상시 감지
-VLM_PROVIDER=openrouter OPENROUTER_API_KEY=... \
-  .venv/bin/python -m vlm_service.main --frames-url http://127.0.0.1:8081/frame/latest
+.venv/bin/python -m vlm_service.main --frames-url http://127.0.0.1:8081/frame/latest
 ```
 
 ```bash
 # ④ 음성 인식 (선택 — 안 띄워도 세션은 완결된다)
-CLOVA_SPEECH_SECRET=... .venv/bin/python -m voice_service.main
+.venv/bin/python -m voice_service.main
 ```
 
 > **소리는 태블릿에서 난다.** 캐릭터 얼굴이 있는 곳에서 목소리가 나오는 편이 아동에게
@@ -199,7 +219,7 @@ sudo ufw allow 4173/tcp && sudo ufw allow 8000/tcp             # 방화벽
 
 ---
 
-## 4. 로봇 없이 리허설
+## 5. 로봇 없이 리허설
 
 실물이 준비되기 전에도 전 구간이 돈다.
 
@@ -212,7 +232,7 @@ sudo ufw allow 4173/tcp && sudo ufw allow 8000/tcp             # 방화벽
 
 ---
 
-## 5. 시연 중 손잡이
+## 6. 시연 중 손잡이
 
 | 상황 | 조치 |
 |---|---|
@@ -227,7 +247,7 @@ sudo ufw allow 4173/tcp && sudo ufw allow 8000/tcp             # 방화벽
 
 ---
 
-## 6. 시연 후
+## 7. 시연 후
 
 세션 로그는 `logs/<session_id>.jsonl` 이다. Ran 문서 4절의 행동지표 14개가 여기서 나온다.
 

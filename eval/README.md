@@ -52,8 +52,7 @@ T_judge ≤ 3초 충족: 2/45 = 4%
 ```bash
 python tools/extract_frames.py --file-index 0 --offsets 2.5,6 --out /tmp/eval_set
 python tools/extract_frames.py --file-index 2 --offsets 2.5,6 --out /tmp/eval_set
-VLM_PROVIDER=openrouter OPENROUTER_API_KEY=... \
-  python tools/eval_vlm.py --labels eval/labels_45.csv --root /tmp/eval_set --concurrency 1
+python tools/eval_vlm.py --labels eval/labels_45.csv --root /tmp/eval_set --concurrency 1
 ```
 
 ## 아직 검증 안 된 것

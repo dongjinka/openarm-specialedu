@@ -24,6 +24,8 @@ import logging
 
 import websockets
 
+import openarm_env
+
 from voice_service.intents import classify
 from voice_service.listener import listen, to_wav
 from voice_service.transcribe import NullTranscriber, make_transcriber
@@ -144,6 +146,7 @@ def main() -> None:
                    help="마이크 없이 이 문장을 들은 것으로 친다 (배선 확인용)")
     args = p.parse_args()
 
+    openarm_env.load()      # .env 의 API 키를 올린다
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     transcriber = NullTranscriber() if args.fake_text else make_transcriber(args.provider)
     svc = VoiceService(transcriber, fake_text=args.fake_text)

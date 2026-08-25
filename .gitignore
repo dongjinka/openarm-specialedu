@@ -9,3 +9,6 @@ episode_labels/
 
 # Claude Code 로컬 워크트리 — 프로젝트 내용이 아니다
 .claude/
+
+# API 키. .env.example 을 복사해 만든다
+.env

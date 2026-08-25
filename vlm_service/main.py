@@ -24,6 +24,8 @@ import logging
 
 import websockets
 
+import openarm_env
+
 from vlm_service.backends import make_backend
 from vlm_service.frames import DirectoryFrameSource, HttpFrameSource
 from vlm_service.service import JudgeService
@@ -195,6 +197,7 @@ def main() -> None:
                    help="상시 감지를 끄고 운영자 버튼 트리거만 쓴다 (폴백)")
     args = p.parse_args()
 
+    openarm_env.load()      # .env 의 API 키를 올린다
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     frames = (HttpFrameSource(args.frames_url) if args.frames_url
               else DirectoryFrameSource(args.frames_dir or "/tmp/eval_set/thumbs"))
