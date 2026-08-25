@@ -11,6 +11,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import io
 import logging
 from typing import Any
@@ -77,8 +78,25 @@ def build_app(backend) -> FastAPI:
 
 
 async def serve(backend, host: str, port: int) -> None:
+    """취소되면 uvicorn 을 **스스로 접게** 한다.
+
+    태스크를 그냥 취소하면 uvicorn 의 lifespan 태스크가 `CancelledError` 트레이스백을
+    ERROR 로 찍는다. 종료 시점에 정작 봐야 할 것은 그 밑에 오는 teardown 로그
+    (시작 자세 복귀 · `arms lowered and released` · `torque released`)인데,
+    그것을 묻어 버린다. `should_exit` 로 접으면 조용히 끝난다.
+    """
     import uvicorn
 
     config = uvicorn.Config(build_app(backend), host=host, port=port,
                             log_level="warning", access_log=False)
-    await uvicorn.Server(config).serve()
+    server = uvicorn.Server(config)
+    # 우리가 신호를 소유한다 — uvicorn 이 자기 핸들러를 걸면 그쪽이 이긴다.
+    server.install_signal_handlers = lambda: None
+    task = asyncio.create_task(server.serve())
+    try:
+        await asyncio.shield(task)
+    except asyncio.CancelledError:
+        server.should_exit = True
+        with contextlib.suppress(Exception):
+            await asyncio.wait_for(task, timeout=5)
+        raise

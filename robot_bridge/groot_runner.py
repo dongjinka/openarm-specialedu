@@ -361,6 +361,11 @@ class GrootBackend:
             self._aborted.discard(cmd_id)
             await self._recover_to_home("중단 요청")
             return RobotOutcome(False, "aborted", elapsed_ms, "중단 요청")
+        if self.shutdown.is_set():
+            # 프로세스 종료 신호로 루프가 멈췄다. `_aborted` 에는 없으므로 아래
+            # 성공 경로로 새어 나가 '완주'로 기록되던 자리다.
+            # 홈으로 되감지 않는다 — 곧 teardown 이 시작 자세 복귀와 하강을 한다.
+            return RobotOutcome(False, "aborted", elapsed_ms, "프로세스 종료")
         if elapsed_ms >= deadline_ms:
             await self._recover_to_home("데드라인 초과")
             return RobotOutcome(False, "timeout", elapsed_ms, "데드라인 초과")
