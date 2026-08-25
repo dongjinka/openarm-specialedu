@@ -286,7 +286,13 @@ def parse_inbound(payload: dict) -> InboundEvent:
 # VLM 은 robot_* 를 보낼 수 없다. 허브-스포크를 타입으로 강제하는 지점.
 
 ALLOWED_SENDERS: dict[str, frozenset[Role]] = {
-    "session_start": frozenset({Role.OPERATOR}),
+    #: 태블릿도 낼 수 있다 — 아이가 시작 버튼을 누르는 그 탭이 세션의 시작이다.
+    #: 같은 탭이 브라우저 오디오 잠금도 푼다(Chrome 자동재생 정책). 둘은 같은 순간이어야
+    #: 한다: 소리가 열리기 전에 세션이 시작되면 INTRO 첫 줄을 놓치고, 운영자가 따로
+    #: 눌러 주는 방식은 아이가 기다리는 동안 잊기 쉬운 단계였다.
+    #: 상태 머신은 IDLE 에서만 이 이벤트에 반응하므로, 태블릿이 새로고침하고 다시
+    #: 눌러도 진행 중인 세션은 다시 시작되지 않는다. 운영자 경로는 폴백으로 남긴다.
+    "session_start": frozenset({Role.OPERATOR, Role.TABLET}),
     "child_placed": frozenset({Role.OPERATOR, Role.CAPTURE}),
     "judge": frozenset({Role.VLM}),
     "judge_override": frozenset({Role.OPERATOR}),
