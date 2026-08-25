@@ -1,0 +1,9 @@
+{
+  "type": "openarm_sciedu",
+  "config_path": "/home/leap/Documents/openarmsciedu/config/robot_a.yaml",
+  "arms": "left,right",
+  "cameras_from_yaml": true,
+  "go_home": true,
+  "entry_ramp_s": 2.0,
+  "max_start_mismatch_deg": 45.0
+}
