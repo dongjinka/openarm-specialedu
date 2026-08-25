@@ -47,6 +47,105 @@ PROGRESS_INTERVAL_S = 1.0
 #: 여기는 **동작 중 이탈**을 잡는 그물이고, 5Hz 면 충분하다.
 ENVELOPE_INTERVAL_S = 0.2
 
+# ── 작업 완료 감지 ───────────────────────────────────────────────────────────
+#
+# 롤아웃 루프는 `duration` 이 다 될 때까지만 돈다(`strategies/base.py`:
+# `while not shutdown_event.is_set(): ... if elapsed >= cfg.duration: break`).
+# **완료 감지가 없다.** 그래서 34~46초면 끝나는 동작에 150초를 걸어 두면 남은
+# 100초 동안 정책이 학습에 없는 상태에서 계속 액션을 낸다 — 아이는 대기 화면에서
+# 그만큼 기다리고, 그 사이 운영자 키는 전부 무시된다(ROBOT_TURN 이 안 끝나서).
+#
+# 무엇을 신호로 쓸지는 데이터로 골랐다. `nuedive_test_90epi_merged_20260825` 의
+# ep0~59(현재 홈과 같은 구간, 60개) 에서 "마지막 큰 움직임 → 에피소드 끝":
+#
+#     왼쪽 그리퍼   중앙  3.5초  (p10 2.9 / p90 4.8)   ← 쓴다
+#     오른쪽 그리퍼 중앙 14.1초  (p10 12.7 / p90 16.1)
+#     팔 14축 전체  중앙  1.1초  (p10 0.5 / p90 1.9)   ← 너무 늦다. 끊을 시간이 없다
+#
+# 관절 각도로 "종료 자세에 가까워졌나"를 보는 방식은 버렸다. 팔이 궤적 중간에
+# 종료 자세 근처를 지나가서 오탐이 심하다 — 임계 20도면 59/60 에서 걸리지만
+# 실제 종료보다 중앙 44.3초 일찍 걸린다(사실상 시작하자마자). 정지 감지도 안 된다:
+# 종료 직전 3초의 관절 속도가 중앙 14.1도/초로 여전히 움직이는 중이다.
+#
+# 왼쪽 그리퍼는 가방을 잡는 쪽이고, 궤적이 에피소드마다 사실상 같다:
+#
+#     0~20%  -60(열림)  →  30~80%  ~0(닫힘, 가방을 쥔 채)  →  90~100%  -60(놓음)
+#
+# 즉 **가방을 닫고 놓는 순간**이 작업의 끝이다. 열림(-60)과 닫힘(0) 사이가 60도라
+# 임계 하나로 갈리고 여유가 30도씩 있다.
+#
+# 한계는 참고한 선행 실험(andyjusa/vla-subtask-phase-probe)이 스스로 적어 둔 것과
+# 같다 — 이것은 정책의 **의도**이지 물리적 성공이 아니다. 물건이 실제로 가방에
+# 들어갔는지는 여기서 판단하지 않는다. 그 판정은 원래대로 ROBOT_VERIFY 의 VLM
+# ("배치면이 비었나 + 가방이 닫혔나")이 한다. 여기서 정하는 것은 **턴을 언제
+# 끊을까** 뿐이다.
+#
+# 실패 방향도 안전한 쪽이다. 정책이 가방을 못 잡으면 그리퍼가 닫히지 않아 감지가
+# 아예 발화하지 않고, 턴은 예전처럼 deadline 까지 간다. 반대로 도중에 가방을
+# 떨어뜨려 일찍 발화하면 ROBOT_VERIFY 가 `bag_closed=false` 로 잡는다.
+
+#: 왼쪽 그리퍼 열림/닫힘 경계(도). 열림 -60 · 닫힘 0 사이 한가운데.
+LEFT_GRIPPER_OPEN_DEG = -30.0
+#: 놓은 뒤 이만큼 유지돼야 완료로 본다. 데이터상 놓고 나서 3.5초(p10 2.9)가
+#: 남으므로, 1초를 기다려도 자연스러운 끝보다 일찍 끊는다.
+COMPLETE_HOLD_S = 1.0
+#: 가방을 쥐었다고 인정하는 최소 시간. 시작할 때 그리퍼는 열려 있으므로,
+#: "닫힘을 본 적 있다"를 먼저 요구해야 시작 상태를 완료로 오인하지 않는다.
+GRIP_CONFIRM_S = 1.0
+
+#: 왼쪽 그리퍼가 `observation.state` 안에서 몇 번째인가. 봉투 정의에서 찾는다 —
+#: 인덱스를 손으로 적으면 봉투가 바뀔 때 조용히 어긋난다.
+LEFT_GRIPPER_INDEX = STATE_KEYS.index("left_gripper.pos")
+
+
+class CompletionDetector:
+    """왼쪽 그리퍼로 '가방을 닫고 놓았다'를 잡는다. 순수 함수라 리플레이로 검증된다.
+
+    상태는 셋뿐이다.
+        열림 대기 → (닫힘을 GRIP_CONFIRM_S 이상 유지) → 쥠
+        쥠      → (열림을 COMPLETE_HOLD_S 이상 유지) → 완료
+    """
+
+    def __init__(self, *, open_deg: float = LEFT_GRIPPER_OPEN_DEG,
+                 hold_s: float = COMPLETE_HOLD_S,
+                 confirm_s: float = GRIP_CONFIRM_S) -> None:
+        self.open_deg = open_deg
+        self.hold_s = hold_s
+        self.confirm_s = confirm_s
+        self.gripped = False
+        self.done = False
+        self._closed_since: float | None = None
+        self._open_since: float | None = None
+
+    def update(self, left_gripper_deg: float, now_s: float) -> bool:
+        """한 틱. 완료로 막 판정된 순간에만 True 를 돌려준다."""
+        if self.done:
+            return False
+        is_open = left_gripper_deg < self.open_deg
+
+        if not self.gripped:
+            if is_open:
+                self._closed_since = None
+                return False
+            if self._closed_since is None:
+                self._closed_since = now_s
+            elif now_s - self._closed_since >= self.confirm_s:
+                self.gripped = True
+                self._open_since = None
+            return False
+
+        if not is_open:
+            self._open_since = None
+            return False
+        if self._open_since is None:
+            self._open_since = now_s
+            return False
+        if now_s - self._open_since >= self.hold_s:
+            self.done = True
+            return True
+        return False
+
+
 
 def _extract_state(obs: dict[str, Any]) -> list[float] | None:
     """관측 dict 에서 16차원 관절 상태를 뽑는다. 못 뽑으면 None.
@@ -154,15 +253,17 @@ def _build_strategy_class():
         인스턴스 메서드로 오버라이드하면 그대로 잡힌다.
         """
 
-        def bind(self, loop, on_progress: ProgressCb, on_violation) -> None:
+        def bind(self, loop, on_progress: ProgressCb, on_violation, on_complete) -> None:
             self._loop = loop
             self._on_progress = on_progress
             self._on_violation = on_violation
+            self._on_complete = on_complete
             self._t0 = time.monotonic()
             self._last_tick = -PROGRESS_INTERVAL_S
             self._last_check = -ENVELOPE_INTERVAL_S
             self._state_seen = False
             self._violated = False
+            self._detector = CompletionDetector()
             self._bound = True
 
         _bound = False
@@ -197,6 +298,17 @@ def _build_strategy_class():
                     logger.error("관절 봉투 위반 — 즉시 정지: %s", pf.detail)
                     runtime_ctx.shutdown_event.set()
                     self._loop.call_soon_threadsafe(self._on_violation, pf.detail)
+                    return
+
+                # ①-b 작업 완료 — 왼팔이 가방을 닫고 놓았다. 봉투 검사와 같은
+                # 5Hz 주기를 쓴다(state 를 여기서만 뽑는다). 감지되면 루프를
+                # 세워 남은 deadline 을 태우지 않는다 — 자세한 근거는
+                # CompletionDetector 위의 주석에 있다.
+                if self._detector.update(state[LEFT_GRIPPER_INDEX], elapsed):
+                    logger.info("작업 완료 감지 (왼쪽 그리퍼가 가방을 놓음, %.1fs) — 턴을 끝낸다",
+                                elapsed)
+                    runtime_ctx.shutdown_event.set()
+                    self._loop.call_soon_threadsafe(self._on_complete)
                     return
 
             # ② progress_tick — 무발화 구간의 유일한 진행 신호.
@@ -341,7 +453,9 @@ class GrootBackend:
         self.ctx.runtime.cfg.duration = deadline_ms / 1000.0
 
         violations: list[str] = []
-        self.strategy.bind(asyncio.get_running_loop(), on_progress, violations.append)
+        completed: list[bool] = []
+        self.strategy.bind(asyncio.get_running_loop(), on_progress,
+                           violations.append, lambda: completed.append(True))
 
         started = time.monotonic()
         try:
@@ -361,6 +475,12 @@ class GrootBackend:
             self._aborted.discard(cmd_id)
             await self._recover_to_home("중단 요청")
             return RobotOutcome(False, "aborted", elapsed_ms, "중단 요청")
+        if completed:
+            # 완료 감지가 루프를 세웠다. **아래 shutdown 검사보다 먼저 본다** —
+            # 감지도 `shutdown_event` 로 루프를 세우므로 순서가 뒤바뀌면 정상 완료가
+            # '프로세스 종료' 로 기록된다.
+            # 홈으로 되감지 않는 이유는 아래 성공 경로와 같다.
+            return RobotOutcome(True, "verified", elapsed_ms, "")
         if self.shutdown.is_set():
             # 프로세스 종료 신호로 루프가 멈췄다. `_aborted` 에는 없으므로 아래
             # 성공 경로로 새어 나가 '완주'로 기록되던 자리다.
