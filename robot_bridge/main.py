@@ -232,10 +232,11 @@ def main() -> None:
     p.add_argument("--chunk-size", type=int, default=None,
                    help="모델이 한 번에 예측하는 액션 개수. 비우면 체크포인트 값(40) — "
                         "실측으로 40이 가장 좋았으므로 기본은 건드리지 않는다")
-    p.add_argument("--n-action-steps", type=int, default=6,
-                   help="예측한 것 중 몇 개를 실행하고 다시 관측할지(개루프 구간). "
-                        "체크포인트 기본은 40이라 1.33초를 눈 감고 간다 — 물체 앞에서 "
-                        "그리퍼가 안 닫히던 원인. 0 이하를 주면 체크포인트 값을 쓴다")
+    p.add_argument("--n-action-steps", type=int, default=None,
+                   help="한 번 추론으로 실행할 액션 수. **비워 두는 것이 정답이다**(체크포인트 40). "
+                        "학습 데이터는 gripper 전환 직전마다 약 1초를 쉬므로, 실행 청크가 그보다 "
+                        "짧으면 close/open 이 청크 밖으로 밀려 그리퍼가 아예 안 닫힌다. 팀이 16→40 "
+                        "으로 올려 성공률 95%% 이상을 얻은 값이다. 줄이지 말 것")
     p.add_argument("--stock-strategy", action="store_true",
                    help="순정 BaseStrategy 로 돌고 데드라인을 밖에서 건다 — 잘 도는 팀원 구현과\n"
                         "같은 경로. **동작 중 봉투 검사와 완료 감지가 사라진다.** 원인 규명용")

@@ -364,7 +364,7 @@ class GrootBackend:
 
     def __init__(self, policy_path: str, device: str = "cuda", *, robot_cfg=None,
                  fps: float = 30.0, chunk_size: int | None = None,
-                 n_action_steps: int | None = 6,
+                 n_action_steps: int | None = None,
                  stock_strategy: bool = False) -> None:
         self.policy_path = policy_path
         self.device = device
