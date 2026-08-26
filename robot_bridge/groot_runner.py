@@ -29,7 +29,7 @@ import time
 from typing import Any
 
 from robot_bridge.backend import ProgressCb, RobotOutcome
-from robot_bridge.preflight import GROOT_TASK, STATE_ENVELOPE, check_state
+from robot_bridge.preflight import GROOT_TASK, STATE_ENVELOPE
 
 logger = logging.getLogger(__name__)
 
@@ -259,16 +259,14 @@ def _build_strategy_class():
         인스턴스 메서드로 오버라이드하면 그대로 잡힌다.
         """
 
-        def bind(self, loop, on_progress: ProgressCb, on_violation, on_complete) -> None:
+        def bind(self, loop, on_progress: ProgressCb, on_complete) -> None:
             self._loop = loop
             self._on_progress = on_progress
-            self._on_violation = on_violation
             self._on_complete = on_complete
             self._t0 = time.monotonic()
             self._last_tick = -PROGRESS_INTERVAL_S
             self._last_check = -ENVELOPE_INTERVAL_S
             self._state_seen = False
-            self._violated = False
             self._detector = CompletionDetector()
             self._bound = True
 
@@ -282,7 +280,17 @@ def _build_strategy_class():
                 return
             elapsed = time.monotonic() - self._t0
 
-            # ① 관절 봉투 — 전처리기가 clip_outliers 로 조용히 뭉개기 전에 잡는다.
+            # ① 관절 상태 추출 — 완료 감지(아래 ①-b)가 여기 기댄다.
+            #
+            # 2026-08-26 사용자 요청으로 동작 중 관절 봉투 위반 → 즉시 정지·홈복귀
+            # 트리거를 제거했다(예전 ①번, `check_state`/`_on_violation` 경로). 밤샘
+            # 리허설에서 실제로 잡은 사례(46~50° 관절 드리프트, 원인 미해결 —
+            # docs/HANDOFF_20260825.md §3)가 있었지만, 시나리오 진행 중 정책이
+            # 살짝 튀는 것까지 매번 정지·홈복귀로 끊어 시나리오가 끝까지 안 돌던
+            # 문제가 더 급했다. 남은 안전장치: 매 명령 직전 프리플라이트
+            # (`robot_bridge/main.py`, 쉬는 자세가 이미 봉투 밖이면 다음 턴을 아예
+            # 안 연다)와, 모든 실제 모터 명령에 걸리는 하드 클램프/레이트 리미터
+            # (`openarm_sciedu.core.safety.SafetyChain`, 정책과 무관하게 항상 돈다).
             due = elapsed - self._last_check >= ENVELOPE_INTERVAL_S
             state = _extract_state(obs_processed) if (due and obs_processed) else None
             if due:
@@ -291,22 +299,15 @@ def _build_strategy_class():
                 if not self._state_seen:
                     self._state_seen = True
                     logger.error(
-                        "관측에서 16차원 관절 상태를 못 찾았다 — **봉투 검사가 꺼진 채 돈다.** "
+                        "관측에서 16차원 관절 상태를 못 찾았다 — **완료 감지가 꺼진 채 돈다.** "
                         "키: %s", sorted(obs_processed or {})[:12],
                     )
             else:
                 if not self._state_seen:
                     self._state_seen = True
-                    logger.info("봉투 검사 활성 (관절 16개 확인)")
-                pf = check_state(state)
-                if not pf.ok and not self._violated:
-                    self._violated = True
-                    logger.error("관절 봉투 위반 — 즉시 정지: %s", pf.detail)
-                    runtime_ctx.shutdown_event.set()
-                    self._loop.call_soon_threadsafe(self._on_violation, pf.detail)
-                    return
+                    logger.info("완료 감지 활성 (관절 16개 확인)")
 
-                # ①-b 작업 완료 — 왼팔이 가방을 닫고 놓았다. 봉투 검사와 같은
+                # ①-b 작업 완료 — 왼팔이 가방을 닫고 놓았다. 예전 봉투 검사와 같은
                 # 5Hz 주기를 쓴다(state 를 여기서만 뽑는다). 감지되면 루프를
                 # 세워 남은 deadline 을 태우지 않는다 — 자세한 근거는
                 # CompletionDetector 위의 주석에 있다.
@@ -578,11 +579,10 @@ class GrootBackend:
         self._reset_inference()             # 이전 턴의 액션 큐를 버린다
         self.ctx.runtime.cfg.duration = deadline_ms / 1000.0
 
-        violations: list[str] = []
         completed: list[bool] = []
         if not self.stock_strategy:
             self.strategy.bind(asyncio.get_running_loop(), on_progress,
-                               violations.append, lambda: completed.append(True))
+                               lambda: completed.append(True))
 
         started = time.monotonic()
         deadline_task: asyncio.Task | None = None
@@ -611,10 +611,6 @@ class GrootBackend:
                 deadline_task.cancel()
         elapsed_ms = int((time.monotonic() - started) * 1000)
 
-        if violations:
-            detail = f"preflight: {violations[0]}"
-            await self._recover_to_home(detail)
-            return RobotOutcome(False, "aborted", elapsed_ms, detail)
         if cmd_id in self._aborted:
             self._aborted.discard(cmd_id)
             await self._recover_to_home("중단 요청")
