@@ -58,7 +58,11 @@ PRESENTATION: dict[Phase, Presentation] = {
     Phase.DUPLICATE: Presentation(Expression.HAPPY, "duplicate_generic"),
     # 로봇 동작 중 발화 금지 — 아동 시선이 로봇 팔로 가야 한다 (§4.5).
     Phase.ROBOT_TURN: Presentation(Expression.NEUTRAL, None, silent=True),
-    Phase.ROBOT_VERIFY: Presentation(Expression.THINKING, None, silent=True),
+    # 이 시점이면 이미 CORRECT 판정을 받은 물건을 로봇이 마무리 확인하는 중이다 —
+    # 결과를 모르는 THINKING 은 INCORRECT 와 같은 표정이라 아동에게 "틀렸나?" 로
+    # 읽힌다. 사용자 요청으로 HAPPY 로 바꿨다(2026-08-26) — 태블릿 쪽 문구도 같이
+    # 바뀐다(+page.svelte, pose==='happy' 분기).
+    Phase.ROBOT_VERIFY: Presentation(Expression.HAPPY, None, silent=True),
     # 로봇의 실패를 아동이 자기 실패로 받으면 안 된다 (§4.5 프롬프트 위계의 정신).
     Phase.ROBOT_FAIL: Presentation(Expression.THINKING, "robot_mistake"),
     Phase.NEXT: Presentation(Expression.NEUTRAL, None, silent=True),
