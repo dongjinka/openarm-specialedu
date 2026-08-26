@@ -232,11 +232,13 @@ def main() -> None:
     p.add_argument("--chunk-size", type=int, default=None,
                    help="모델이 한 번에 예측하는 액션 개수. 비우면 체크포인트 값(40) — "
                         "실측으로 40이 가장 좋았으므로 기본은 건드리지 않는다")
-    p.add_argument("--n-action-steps", type=int, default=None,
-                   help="한 번 추론으로 실행할 액션 수. **비워 두는 것이 정답이다**(체크포인트 40). "
-                        "학습 데이터는 gripper 전환 직전마다 약 1초를 쉬므로, 실행 청크가 그보다 "
-                        "짧으면 close/open 이 청크 밖으로 밀려 그리퍼가 아예 안 닫힌다. 팀이 16→40 "
-                        "으로 올려 성공률 95%% 이상을 얻은 값이다. 줄이지 말 것")
+    p.add_argument("--n-action-steps", type=int, default=40,
+                   help="한 번 추론으로 실행할 액션 수. 기본값 40 — 체크포인트 값과 같고, "
+                        "명시적으로 적어 둔다(2026-08-26 사용자 확정, 체크포인트 값에 암묵적으로 "
+                        "얹혀가지 않는다). 학습 데이터는 gripper 전환 직전마다 약 1초를 쉬므로, "
+                        "실행 청크가 그보다 짧으면 close/open 이 청크 밖으로 밀려 그리퍼가 아예 "
+                        "안 닫힌다. 팀이 16→40 으로 올려 성공률 95%% 이상을 얻은 값이다. "
+                        "줄이지 말 것 — groot_runner.py 의 관련 주석 참조")
     p.add_argument("--stock-strategy", action="store_true",
                    help="순정 BaseStrategy 로 돌고 데드라인을 밖에서 건다 — 잘 도는 팀원 구현과\n"
                         "같은 경로. **동작 중 봉투 검사와 완료 감지가 사라진다.** 원인 규명용")
