@@ -64,6 +64,12 @@ class SessionState:
     listen_mode: str = "off"
     #: 아동이 "다시 말해줘" 라고 한 횟수 — Ran 하위과제 3 의 작업기억 지표.
     repeat_requests: int = 0
+    #: ROBOT_VERIFY 에서 VLM 이 `verify_hold` 로 알려온 마지막 `object_in_bag`.
+    #: 가방이 팔에 가려 `bag_closed` 를 못 볼 때도 이 값은 이미 알려져 있다.
+    #: `verify_timeout` 이 이걸 참고해, 물건은 확인됐는데 가림 때문에 못 닫힘
+    #: 판정만 못 받은 턴을 무조건 ROBOT_FAIL 로 보내지 않는다. ROBOT_VERIFY 진입마다
+    #: None 으로 초기화된다 — 이전 턴 값이 새 턴으로 새면 안 된다.
+    last_verify_in_bag: bool | None = None
 
     def remaining(self, scenario: Scenario) -> tuple[str, ...]:
         return tuple(o for o in scenario.checklist if o not in self.packed)
@@ -229,6 +235,7 @@ def _enter(state: SessionState, scenario: Scenario, phase: Phase, now_ms: int) -
         return Transition(state, effects)
 
     if phase is Phase.ROBOT_VERIFY:
+        state = replace(state, last_verify_in_bag=None)
         effects.append(Broadcast(_state_event(state, scenario)))
         effects.append(RequestVerify(cmd_id=state.pending_cmd_id or "", target=state.pending_object))
         effects.append(StartTimer(TIMER_VERIFY, scenario.verify_timeout_ms))
@@ -440,9 +447,35 @@ def handle(
     if state.phase is Phase.ROBOT_VERIFY:
         if t == "verify_result":
             return _resolve_verify(state, event, scenario, now_ms)
+        if t == "verify_hold":
+            # bag_closed 는 아직 모른다 — 기록만 해 두고 TIMER_VERIFY 는 그대로
+            # 돌린다. 운영자가 v/vf 로 확정하면 여기서 끝나고, 아무도 안 누르면
+            # 아래 timeout 분기가 이 값을 근거로 스스로 판단한다.
+            return Transition(replace(state, last_verify_in_bag=event.object_in_bag), [
+                Log("verify_hold", {"cmd_id": event.cmd_id, "object_in_bag": event.object_in_bag,
+                                    "confidence": event.confidence, "reason": event.reason}),
+                Broadcast({"type": "operator_attention", "reason": "verify_hold",
+                          "object_in_bag": event.object_in_bag, "detail": event.reason},
+                         roles=(ev.Role.OPERATOR,)),
+            ])
         if t == "timeout" and event.timer == TIMER_VERIFY:
+            if state.last_verify_in_bag:
+                # 가방이 팔에 가려 bag_closed 만 못 봤을 뿐, 물건이 들어간 것은
+                # 이미 확인됐다. 실패로 안내하지 않고 낙관적으로 성공 처리한다 —
+                # 어차피 이 경로는 원래도 가방 상태를 모른 채로 다음 턴에 진행했다
+                # (ROBOT_FAIL → NEXT), 그러니 안전성 손해 없이 거짓 실패 발화만
+                # 없앤다. 오늘 밤 관측된 모든 hold 케이스가 in_bag=True 였다
+                # (실물 로그 2026-08-26 확인).
+                cmd_id = state.pending_cmd_id
+                state = replace(state, pending_cmd_id=None, pending_object=None, bag_ok=True)
+                tr = _enter(state, scenario, Phase.NEXT, now_ms)
+                return Transition(tr.state, [Log("verify_timeout", {
+                    "cmd_id": cmd_id, "resolved": "optimistic_success",
+                    "last_verify_in_bag": True})] + tr.effects)
             tr = _enter(state, scenario, Phase.ROBOT_FAIL, now_ms)
-            return Transition(tr.state, [Log("verify_timeout", {"cmd_id": state.pending_cmd_id})] + tr.effects)
+            return Transition(tr.state, [Log("verify_timeout", {
+                "cmd_id": state.pending_cmd_id, "resolved": "fail",
+                "last_verify_in_bag": state.last_verify_in_bag})] + tr.effects)
 
     if state.phase is Phase.ROBOT_FAIL and t == "advance":
         # 이 물건은 포기하고 넘어간다. 아동에게는 로봇의 실수로 안내된 뒤다.

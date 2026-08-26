@@ -164,10 +164,16 @@ class VlmService:
         if verdict.hold_for_operator:
             # 가방 상태를 못 봤다. 닫혔다고 추측하면 열린 채 다음 턴이 시작되고,
             # 열렸다고 하면 성공한 턴이 아동에게 '로봇의 실수'로 안내된다. 사람이 정한다.
-            await self.vlm_sock.send({"type": "operator_attention", "reason": "verify_hold",
-                                      "cmd_id": cmd_id,
+            #
+            # 예전에는 여기서 `{"type": "operator_attention", ...}` 를 직접 보냈는데,
+            # `operator_attention` 은 오케스트레이터가 내는 **출력** 전용 라벨이지
+            # `events.py` 의 InboundEvent 가 아니다 — orchestrator 가 `parse_inbound`
+            # 에서 이 메시지를 거부해 조용히 버려졌다(실물 로그로 확인, 2026-08-26).
+            # `judge` 의 `vlm_hold` 와 같은 패턴으로 정식 타입을 보낸다.
+            await self.vlm_sock.send({"type": "verify_hold", "cmd_id": cmd_id,
                                       "object_in_bag": verdict.object_in_bag,
-                                      "detail": verdict.reason})
+                                      "confidence": verdict.confidence,
+                                      "reason": verdict.reason})
             return
         await self.vlm_sock.send({"type": "verify_result", "cmd_id": cmd_id,
                                   "object_in_bag": verdict.object_in_bag,

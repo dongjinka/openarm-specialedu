@@ -245,6 +245,54 @@ def test_verify_timeout_fails_safe():
     assert tr.state.phase is Phase.ROBOT_FAIL
 
 
+def test_verify_hold_in_bag_then_timeout_succeeds_optimistically():
+    """가방이 팔에 가려 bag_closed 를 못 봤지만 object_in_bag=True 는 알려졌던 경우.
+
+    타임아웃은 어차피 가방 상태를 모른 채로 진행한다 — 실패로 안내할 이유가 없다.
+    """
+    s = reach_robot_turn()
+    s, _ = drive(s, [ev.RobotDone(cmd_id="c1", success=True,
+                                  reason=ev.DoneReason.VERIFIED, duration_ms=30800)])
+    s, _ = drive(s, [ev.VerifyHold(cmd_id="c1", object_in_bag=True, confidence=0.95,
+                                   reason="backpack opening occluded")])
+    assert s.last_verify_in_bag is True
+    tr = step(s, ev.Timeout(timer="verify"))
+    assert tr.state.phase is Phase.REQUEST      # NEXT 를 지나 다음 항목으로
+    assert tr.state.packed == ("flower",)
+    assert tr.state.pending_cmd_id is None
+    assert tr.state.bag_ok is True
+
+
+def test_verify_hold_object_missing_then_timeout_still_fails():
+    """object_in_bag 자체가 False/불명이면 낙관을 걸지 않는다 — 기존 안전값 유지."""
+    s = reach_robot_turn()
+    s, _ = drive(s, [ev.RobotDone(cmd_id="c1", success=True,
+                                  reason=ev.DoneReason.VERIFIED, duration_ms=30800)])
+    s, _ = drive(s, [ev.VerifyHold(cmd_id="c1", object_in_bag=False, confidence=0.4,
+                                   reason="surface not visible")])
+    tr = step(s, ev.Timeout(timer="verify"))
+    assert tr.state.phase is Phase.ROBOT_FAIL
+
+
+def test_verify_hold_resets_between_turns():
+    """지난 턴의 verify_hold 값이 다음 턴 타임아웃으로 새면 안 된다."""
+    s = reach_robot_turn()
+    s, _ = drive(s, [ev.RobotDone(cmd_id="c1", success=True,
+                                  reason=ev.DoneReason.VERIFIED, duration_ms=30800)])
+    s, _ = drive(s, [ev.VerifyHold(cmd_id="c1", object_in_bag=True, confidence=0.95,
+                                   reason="occluded")])
+    s, _ = drive(s, [ev.Timeout(timer="verify")])   # 첫 턴은 낙관적으로 성공
+    assert s.phase is Phase.REQUEST
+    s, _ = drive(s, [ev.Advance(),                  # REQUEST -> WAIT_CHILD (다음 항목)
+                     ev.ChildPlaced(),
+                     ev.Judge(object="whale", should_pack=True, confidence=0.95),
+                     ev.Advance(),                  # -> ROBOT_TURN
+                     ev.RobotDone(cmd_id="c2", success=True,
+                                 reason=ev.DoneReason.VERIFIED, duration_ms=30800)])
+    assert s.phase is Phase.ROBOT_VERIFY            # last_verify_in_bag 은 여기서 초기화된다
+    assert s.last_verify_in_bag is None
+
+
 def test_robot_fail_can_skip_forward():
     s = reach_robot_turn()
     s, _ = drive(s, [ev.RobotError(cmd_id="c1", reason=ev.FailureReason.UNKNOWN)])

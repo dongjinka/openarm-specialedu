@@ -126,6 +126,21 @@ class VerifyResult(_Event):
     bag_closed: bool
 
 
+class VerifyHold(_Event):
+    """사후 확인에서 가방 상태를 못 봤다 (`BagState.HIDDEN` 또는 저신뢰).
+
+    `bag_closed` 는 아예 모른다는 뜻이라 `VerifyResult` 로 보낼 수 없다 — 그러나
+    `object_in_bag` 은 이미 알려진 값이라 여기 실어 둔다. `verify_timeout` 이 이
+    값을 참고해, 가방 여부만 못 봤을 뿐인 턴을 무조건 실패로 안내하지 않는다.
+    """
+
+    type: Literal["verify_hold"] = "verify_hold"
+    cmd_id: str
+    object_in_bag: bool
+    confidence: float = Field(ge=0.0, le=1.0)
+    reason: str = ""
+
+
 class ForceState(_Event):
     type: Literal["force_state"] = "force_state"
     phase: str
@@ -253,6 +268,7 @@ InboundEvent = Annotated[
     | JudgeOverride
     | VlmHold
     | VerifyResult
+    | VerifyHold
     | ForceState
     | RobotAbort
     | RobotDone
@@ -298,6 +314,7 @@ ALLOWED_SENDERS: dict[str, frozenset[Role]] = {
     "judge_override": frozenset({Role.OPERATOR}),
     "vlm_hold": frozenset({Role.VLM}),
     "verify_result": frozenset({Role.VLM, Role.OPERATOR}),
+    "verify_hold": frozenset({Role.VLM}),
     "force_state": frozenset({Role.OPERATOR}),
     "robot_abort": frozenset({Role.OPERATOR}),
     "robot_done": frozenset({Role.ROBOT}),
