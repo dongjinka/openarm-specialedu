@@ -162,10 +162,26 @@ def reach_robot_turn(obj="flower"):
     return s
 
 
-def test_robot_done_goes_to_verify_not_next():
+def test_robot_done_success_skips_verify_and_advances():
+    """PoC 데모 단순화(2026-08-26, 사용자 요청): 로봇이 스스로 성공을 보고하면
+    (success=True) VLM 사후확인을 부르지 않고 곧장 다음 항목으로 넘어간다 —
+    다음 요청 발화가 화면 전환과 함께 바로 나가게 하기 위해서다."""
     s = reach_robot_turn()
     tr = step(s, ev.RobotDone(cmd_id="c1", success=True,
                               reason=ev.DoneReason.VERIFIED, duration_ms=30800))
+    assert tr.state.phase is Phase.REQUEST
+    assert tr.state.packed == ("flower",)
+    assert tr.state.pending_cmd_id is None
+    assert tr.state.bag_ok is True
+
+
+def test_robot_done_self_reported_failure_still_verifies():
+    """success=False 인 robot_done(로봇 스스로 실패를 보고 — 예: 잡았다가
+    떨어뜨림)은 낙관 처리를 건너뛰지 않는다. "정말 안 들어갔을 수도 있는"
+    경로라 사후확인이 여전히 필요하다 — abort/timeout 과 같은 취급이다."""
+    s = reach_robot_turn()
+    tr = step(s, ev.RobotDone(cmd_id="c1", success=False,
+                              reason=ev.DoneReason.TIMEOUT, duration_ms=30800))
     assert tr.state.phase is Phase.ROBOT_VERIFY
 
 
@@ -205,11 +221,18 @@ def test_progress_tick_reaches_the_tablet():
 
 
 # --------------------------------------------------------------- 사후 확인
+#
+# 2026-08-26 부터 robot_done(success=True) 는 ROBOT_VERIFY 를 건너뛴다(위
+# test_robot_done_success_skips_verify_and_advances 참고). 아래 테스트들은
+# 사후 확인 자체의 해소 로직(성공/실패/보류/타임아웃)을 검증하는 것이라,
+# robot_abort 로 ROBOT_VERIFY 에 진입시켜 그 로직을 계속 정확히 겨냥한다 —
+# robot_abort/robot_timeout/self-reported-failure 는 여전히 이 경로를 그대로
+# 탄다(_optimistic_verify_success 를 거치지 않는다).
+
 
 def test_verify_success_advances():
     s = reach_robot_turn()
-    s, _ = drive(s, [ev.RobotDone(cmd_id="c1", success=True,
-                                  reason=ev.DoneReason.VERIFIED, duration_ms=30800)])
+    s, _ = drive(s, [ev.RobotAbort(cmd_id="c1", reason="operator")])
     tr = step(s, ev.VerifyResult(cmd_id="c1", object_in_bag=True, bag_closed=True))
     assert tr.state.phase is Phase.REQUEST      # NEXT 를 지나 다음 항목으로
     assert tr.state.packed == ("flower",)
@@ -219,8 +242,7 @@ def test_verify_success_advances():
 def test_verify_failure_rolls_back_packed():
     """사후 확인이 실패하면 담았다고 표시했던 것을 되돌린다."""
     s = reach_robot_turn()
-    s, _ = drive(s, [ev.RobotDone(cmd_id="c1", success=True,
-                                  reason=ev.DoneReason.VERIFIED, duration_ms=30800)])
+    s, _ = drive(s, [ev.RobotAbort(cmd_id="c1", reason="operator")])
     assert "flower" in s.packed
     tr = step(s, ev.VerifyResult(cmd_id="c1", object_in_bag=False, bag_closed=True))
     assert tr.state.phase is Phase.ROBOT_FAIL
@@ -230,8 +252,7 @@ def test_verify_failure_rolls_back_packed():
 def test_bag_left_open_is_a_failure():
     """다음 턴이 '가방 닫힘'에서 시작하는 전제를 지킨다."""
     s = reach_robot_turn()
-    s, _ = drive(s, [ev.RobotDone(cmd_id="c1", success=True,
-                                  reason=ev.DoneReason.VERIFIED, duration_ms=30800)])
+    s, _ = drive(s, [ev.RobotAbort(cmd_id="c1", reason="operator")])
     tr = step(s, ev.VerifyResult(cmd_id="c1", object_in_bag=True, bag_closed=False))
     assert tr.state.phase is Phase.ROBOT_FAIL
     assert tr.state.bag_ok is False
@@ -239,8 +260,7 @@ def test_bag_left_open_is_a_failure():
 
 def test_verify_timeout_fails_safe():
     s = reach_robot_turn()
-    s, _ = drive(s, [ev.RobotDone(cmd_id="c1", success=True,
-                                  reason=ev.DoneReason.VERIFIED, duration_ms=30800)])
+    s, _ = drive(s, [ev.RobotAbort(cmd_id="c1", reason="operator")])
     tr = step(s, ev.Timeout(timer="verify"))
     assert tr.state.phase is Phase.ROBOT_FAIL
 
@@ -254,8 +274,7 @@ def test_verify_hold_in_bag_resolves_immediately_not_after_20s():
     verify_hold 를 받는 즉시 낙관적으로 끝낸다.
     """
     s = reach_robot_turn()
-    s, _ = drive(s, [ev.RobotDone(cmd_id="c1", success=True,
-                                  reason=ev.DoneReason.VERIFIED, duration_ms=30800)])
+    s, _ = drive(s, [ev.RobotAbort(cmd_id="c1", reason="operator")])
     tr = step(s, ev.VerifyHold(cmd_id="c1", object_in_bag=True, confidence=0.95,
                                reason="backpack opening occluded"))
     assert tr.state.phase is Phase.REQUEST      # NEXT 를 지나 다음 항목으로, 타임아웃 없이
@@ -270,8 +289,7 @@ def test_verify_timeout_still_optimistic_if_hold_flag_set_without_resolving():
     타임아웃도 같은 낙관적 성공으로 마감한다 — verify_hold 의 즉시 해소 분기가
     유일한 진입점이 아니게 되더라도 안전망이 남아 있다."""
     s = reach_robot_turn()
-    s, _ = drive(s, [ev.RobotDone(cmd_id="c1", success=True,
-                                  reason=ev.DoneReason.VERIFIED, duration_ms=30800)])
+    s, _ = drive(s, [ev.RobotAbort(cmd_id="c1", reason="operator")])
     s = replace(s, last_verify_in_bag=True)
     tr = step(s, ev.Timeout(timer="verify"))
     assert tr.state.phase is Phase.REQUEST
@@ -283,8 +301,7 @@ def test_verify_timeout_still_optimistic_if_hold_flag_set_without_resolving():
 def test_verify_hold_object_missing_then_timeout_still_fails():
     """object_in_bag 자체가 False/불명이면 낙관을 걸지 않는다 — 기존 안전값 유지."""
     s = reach_robot_turn()
-    s, _ = drive(s, [ev.RobotDone(cmd_id="c1", success=True,
-                                  reason=ev.DoneReason.VERIFIED, duration_ms=30800)])
+    s, _ = drive(s, [ev.RobotAbort(cmd_id="c1", reason="operator")])
     s, _ = drive(s, [ev.VerifyHold(cmd_id="c1", object_in_bag=False, confidence=0.4,
                                    reason="surface not visible")])
     tr = step(s, ev.Timeout(timer="verify"))
@@ -294,8 +311,7 @@ def test_verify_hold_object_missing_then_timeout_still_fails():
 def test_verify_hold_resets_between_turns():
     """지난 턴의 verify_hold 값이 다음 턴 타임아웃으로 새면 안 된다."""
     s = reach_robot_turn()
-    s, _ = drive(s, [ev.RobotDone(cmd_id="c1", success=True,
-                                  reason=ev.DoneReason.VERIFIED, duration_ms=30800)])
+    s, _ = drive(s, [ev.RobotAbort(cmd_id="c1", reason="operator")])
     s, _ = drive(s, [ev.VerifyHold(cmd_id="c1", object_in_bag=True, confidence=0.95,
                                    reason="occluded")])
     s, _ = drive(s, [ev.Timeout(timer="verify")])   # 첫 턴은 낙관적으로 성공
@@ -304,8 +320,7 @@ def test_verify_hold_resets_between_turns():
                      ev.ChildPlaced(),
                      ev.Judge(object="whale", should_pack=True, confidence=0.95),
                      ev.Advance(),                  # -> ROBOT_TURN
-                     ev.RobotDone(cmd_id="c2", success=True,
-                                 reason=ev.DoneReason.VERIFIED, duration_ms=30800)])
+                     ev.RobotAbort(cmd_id="c2", reason="operator")])
     assert s.phase is Phase.ROBOT_VERIFY            # last_verify_in_bag 은 여기서 초기화된다
     assert s.last_verify_in_bag is None
 
@@ -413,9 +428,10 @@ def test_full_three_item_session_completes():
                          ev.Advance()])
         assert s.phase is Phase.ROBOT_TURN
         assert s.pending_cmd_id == f"c{i}"
+        # robot_done(success=True) 는 사후확인 없이 곧장 진행한다(2026-08-26) —
+        # VerifyResult 를 보낼 필요가 없다.
         s, _ = drive(s, [ev.RobotDone(cmd_id=f"c{i}", success=True,
-                                      reason=ev.DoneReason.VERIFIED, duration_ms=30800),
-                         ev.VerifyResult(cmd_id=f"c{i}", object_in_bag=True, bag_closed=True)])
+                                      reason=ev.DoneReason.VERIFIED, duration_ms=30800)])
         if i < 3:
             s, _ = drive(s, [ev.Advance()])   # REQUEST -> WAIT_CHILD
     assert s.phase is Phase.COMPLETE
@@ -433,9 +449,10 @@ def test_tablet_highlights_the_item_being_packed_not_the_next_one():
     assert correct.payload["target"] == "flower"
     assert correct.payload["progress"]["packed"] == ["flower"]
 
+    # robot_done(success=True) 는 이제 ROBOT_VERIFY 를 건너뛰므로, 사후확인이
+    # 여전히 도는 abort 경로로 재현한다(위 사후 확인 절 설명 참고).
     s2, _ = drive(tr.state, [ev.Advance(),
-                             ev.RobotDone(cmd_id="c1", success=True,
-                                          reason=ev.DoneReason.VERIFIED, duration_ms=30800)])
+                             ev.RobotAbort(cmd_id="c1", reason="operator")])
     tr2 = step(s2, ev.ProgressTick(cmd_id="c1", elapsed_ms=1))  # phase 유지 확인용
     assert s2.phase is Phase.ROBOT_VERIFY and s2.pending_object == "flower"
 

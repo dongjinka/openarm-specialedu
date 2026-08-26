@@ -469,6 +469,17 @@ def handle(
                 Log("robot_done", {"cmd_id": event.cmd_id, "success": event.success,
                                    "reason": event.reason.value, "duration_ms": event.duration_ms}),
             ]
+            if event.success:
+                # PoC 데모 단순화(2026-08-26, 사용자 요청): 로봇이 스스로 성공을
+                # 보고한 정상 종료는 VLM 사후확인을 부르지 않고 곧장 성공 처리한다
+                # — 다음 요청 발화가 화면 전환과 함께 바로 나가게 하기 위해서다.
+                # `event.success=False` 인 robot_done(자체 보고 실패 — 예: 잡았다가
+                # 떨어뜨림)과 robot_abort/robot_timeout(아래, 그대로 둠)은 여전히
+                # ROBOT_VERIFY 로 보내 실제로 확인한다 — 이 셋은 "정말 안 들어갔을
+                # 수도 있는" 경로라 사후확인의 실패 롤백(_resolve_verify)이 여전히
+                # 필요하다. RequestVerify/verify_hold/verify_result 처리 코드는
+                # 지워지지 않는다 — 이 분기(성공 자기보고)만 그쪽으로 안 보낼 뿐이다.
+                return _optimistic_verify_success(state, scenario, now_ms, effects)
             tr = _enter(state, scenario, Phase.ROBOT_VERIFY, now_ms)
             return Transition(tr.state, effects + tr.effects)
         if t == "robot_error":

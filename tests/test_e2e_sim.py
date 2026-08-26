@@ -72,7 +72,8 @@ async def send(ws, payload: dict) -> None:
     await ws.send(json.dumps(payload, ensure_ascii=False))
 
 
-async def run_session(h: Harness, *, verify_ok=lambda obj: (True, True)) -> list[dict]:
+async def run_session(h: Harness, *, verify_ok=lambda obj: (True, True),
+                      robot_kw: dict | None = None) -> list[dict]:
     """운영자·VLM·태블릿을 붙이고 세션을 끝까지 몬다. 태블릿이 본 state 목록을 준다."""
     seen: list[dict] = []
     done = asyncio.Event()
@@ -116,7 +117,7 @@ async def run_session(h: Harness, *, verify_ok=lambda obj: (True, True)) -> list
                                      "should_pack": True, "confidence": 0.95})
 
         loops = [h.spawn(tablet_loop()), h.spawn(operator_loop()), h.spawn(vlm_loop())]
-        h.start_robot()
+        h.start_robot(**(robot_kw or {}))
         await asyncio.sleep(0.2)
         await send(op, {"type": "session_start", "scenario_id": SC.scenario_id})
         await asyncio.wait_for(done.wait(), timeout=TIMEOUT)
@@ -127,6 +128,12 @@ async def run_session(h: Harness, *, verify_ok=lambda obj: (True, True)) -> list
 
 @pytest.mark.asyncio
 async def test_full_session_end_to_end(tmp_path):
+    """정상 경로(robot_done success=True) 는 2026-08-26 부터 VLM 사후확인을
+    건너뛴다(orchestrator/machine.py 의 `event.success` 분기, 사용자 요청) —
+    다음 요청 발화가 화면 전환과 함께 바로 나가게 하기 위해서다. 그래서 여기서는
+    ROBOT_VERIFY 를 더 이상 기대하지 않는다; 그 경로가 여전히 실제로 도는지는
+    아래 test_verify_failure_drops_into_robot_fail 이 (self-reported 실패를
+    통해) 확인한다."""
     async with Harness(tmp_path) as h:
         seen = await run_session(h)
 
@@ -136,8 +143,9 @@ async def test_full_session_end_to_end(tmp_path):
         phases = [s["phase"] for s in seen]
         assert "BAG_SETUP" not in phases, "가방 세팅은 아동 과제가 아니다"
         for expected in ("INTRO", "SHOW_LIST", "REQUEST", "WAIT_CHILD", "JUDGE",
-                         "CORRECT", "ROBOT_TURN", "ROBOT_VERIFY", "COMPLETE", "END"):
+                         "CORRECT", "ROBOT_TURN", "COMPLETE", "END"):
             assert expected in phases, expected
+        assert "ROBOT_VERIFY" not in phases, "정상 완료는 사후확인을 건너뛴다"
 
         # JUDGE 는 thinking 을 즉시 띄워 판정 지연의 공백을 메운다 (§4.5)
         judge = next(s for s in seen if s["phase"] == "JUDGE")
@@ -164,14 +172,21 @@ async def test_full_session_end_to_end(tmp_path):
         assert len(dones) == 3 and all(d["success"] for d in dones)
         assert all("duration_ms" in d for d in dones)
 
-        verifies = [r for r in records if r["event"] == "robot_verify"]
-        assert len(verifies) == 3
-        assert all(v["object_in_bag"] and v["bag_closed"] for v in verifies)
+        # 사후확인이 건너뛰어지므로 robot_verify 로그도 없다.
+        assert [r for r in records if r["event"] == "robot_verify"] == []
+        optimistic = [r for r in records if r["event"] == "verify_optimistic_success"]
+        assert len(optimistic) == 3
 
 
 @pytest.mark.asyncio
 async def test_verify_failure_drops_into_robot_fail(tmp_path):
-    """사후 확인이 실패하면 로봇의 실수로 안내되고, 아동은 실패로 끝나지 않는다."""
+    """사후 확인이 실패하면 로봇의 실수로 안내되고, 아동은 실패로 끝나지 않는다.
+
+    2026-08-26 부터 robot_done(success=True) 는 ROBOT_VERIFY 를 건너뛰므로,
+    이 경로를 실제로 타게 하려면 robot_done 이 스스로 실패를 보고해야 한다
+    (`fail_rate=1.0` — 매 시도가 self-reported failure 로 끝나 사후확인을
+    거친다). 이 테스트가 검증하려는 건 verify 실패 시 롤백이지, robot_done 이
+    성공을 보고했는지가 아니므로 이 대체가 원래 의도를 그대로 지킨다."""
     first = {"n": 0}
 
     def verdict(_target):
@@ -179,7 +194,7 @@ async def test_verify_failure_drops_into_robot_fail(tmp_path):
         return (False, True) if first["n"] == 1 else (True, True)
 
     async with Harness(tmp_path) as h:
-        seen = await run_session(h, verify_ok=verdict)
+        seen = await run_session(h, verify_ok=verdict, robot_kw={"fail_rate": 1.0})
 
         phases = [s["phase"] for s in seen]
         assert "ROBOT_FAIL" in phases
