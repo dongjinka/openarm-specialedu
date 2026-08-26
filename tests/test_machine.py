@@ -455,6 +455,32 @@ def test_vlm_hold_does_not_decide_and_calls_the_operator():
     assert tr2.state.phase is Phase.CORRECT
 
 
+def test_vlm_hold_other_auto_resolves_as_incorrect_when_confidence_is_high():
+    """§5 예외 — 체크리스트 3종이 아닌 물건이 통상 기준으로도 확실하면(0.70 이상)
+    사람 확인 없이 바로 오답 발화(incorrect_generic)를 낸다. 2026-08-26 요청."""
+    s = start()
+    s, _ = drive(s, [ev.ChildPlaced()])
+    tr = step(s, ev.VlmHold(object="other", confidence=0.9, reason="Yellow block on surface"))
+    assert tr.state.phase is Phase.INCORRECT
+    assert kinds(tr.effects, SendRobot) == []
+    given = [b for b in kinds(tr.effects, Broadcast) if b.payload.get("utterance_id")]
+    assert given and given[0].payload["utterance_id"] == "incorrect_generic"
+    assert "vlm_hold_auto_resolved" in logs(tr.effects)
+    # 운영자 호출은 필요 없다 — 자동으로 해소됐다.
+    assert not any(b.payload.get("reason") == "vlm_hold" for b in kinds(tr.effects, Broadcast))
+
+
+def test_vlm_hold_other_still_waits_for_operator_when_confidence_is_low():
+    """confidence 가 낮으면 `other` 여도 자동 처리하지 않는다 — 모델 자신도
+    불확실하다고 표시한 프레임을 그대로 밀어붙이지 않기 위해서다."""
+    s = start()
+    s, _ = drive(s, [ev.ChildPlaced()])
+    tr = step(s, ev.VlmHold(object="other", confidence=0.31, reason="가려짐"))
+    assert tr.state.phase is Phase.JUDGE
+    assert "vlm_hold" in logs(tr.effects)
+    assert "vlm_hold_auto_resolved" not in logs(tr.effects)
+
+
 def test_vlm_cannot_send_vlm_hold_as_another_role():
     assert ev.sender_allowed("vlm_hold", ev.Role.VLM)
     assert not ev.sender_allowed("vlm_hold", ev.Role.ROBOT)

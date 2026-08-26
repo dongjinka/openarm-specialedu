@@ -37,6 +37,12 @@ TIMER_STALL = "stall"
 #: 촉진 위계가 상한에 닿은 뒤 이만큼 더 정체하면 운영자를 부른다.
 STALL_ALERT_AFTER = 3
 
+#: `vlm_hold(object="other")` 를 사람 확인 없이 곧장 오답으로 흘려보낼 최소
+#: confidence. vlm_service `JudgeService` 의 기본 `min_confidence` 와 같은 값
+#: (0.70) — 그보다 낮은 케이스(예: 0.31)까지 자동 처리하면 모델 자신도 불확실하다고
+#: 표시한 프레임을 그냥 밀어붙이는 셈이라 위험이 배가된다.
+AUTO_INCORRECT_MIN_CONFIDENCE = 0.70
+
 
 @dataclass(frozen=True)
 class SessionState:
@@ -397,6 +403,29 @@ def handle(
         return _resolve_judge(state, event, scenario, now_ms)
 
     if state.phase is Phase.JUDGE and t == "vlm_hold":
+        if event.object == "other" and event.confidence >= AUTO_INCORRECT_MIN_CONFIDENCE:
+            # 체크리스트 3종이 아닌 물건이 (통상 기준으로도) 확실할 때는 사람 확인
+            # 없이 곧장 오답 발화(incorrect_generic)를 낸다 — 2026-08-26 사용자
+            # 명시 요청. 애초에 vlm_hold 로 온다는 것 자체가 vlm_service 의
+            # min_confidence(기본 0.70) 미만이거나 `other`/`none` 이라 보류됐다는
+            # 뜻이므로, 여기서 다시 confidence 를 확인해 저신뢰 케이스(예: 0.31)
+            # 까지 자동 처리하지 않도록 한다 — 그 경우는 아래 기존 hold 경로로 간다.
+            #
+            # ⚠️ `none`/저신뢰 실제-클래스 홀드는 여전히 운영자가 확정한다.
+            # `other` 를 곧장 오답으로 흘려보내는 것도 방향은 다르지만 같은 종류의
+            # 위험이다 — 과거 실측 오판정(confidence 0.88)이 정확히 "모델이 틀렸는데
+            # 확신은 높았다" 는 경로였다(`decide()` 주석, tests/test_vlm_contract.py
+            # 의 test_confidence_threshold_is_not_the_real_safety_net). 이 임계값도
+            # 그 위험을 없애주지 않는다 — 여기서는 그 반대 방향(진짜 정답을 other로
+            # 오분류) 위험을 감수하기로 한 것뿐이다.
+            tr = _resolve_judge(
+                state, ev.JudgeOverride(object=event.object, should_pack=False),
+                scenario, now_ms,
+            )
+            log = Log("vlm_hold_auto_resolved", {"object": event.object,
+                                                  "confidence": event.confidence,
+                                                  "reason": event.reason})
+            return Transition(tr.state, [log] + tr.effects)
         # 판정을 내지 않고 JUDGE 에 머문다. 운영자가 judge_override 로 확정한다.
         return Transition(state, [
             CancelTimer(TIMER_JUDGE),
