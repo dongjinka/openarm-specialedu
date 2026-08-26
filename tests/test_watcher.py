@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from orchestrator import events as ev
 from orchestrator.effects import Broadcast, CancelTimer, ForceWatchCheck, Log, SetWatch, StartTimer
-from orchestrator.machine import TIMER_STALL, SessionState, handle
+from orchestrator.machine import TIMER_FORCE_CHECK, TIMER_STALL, SessionState, handle
 from orchestrator.scenario import find_scenario
 from orchestrator.states import Phase
 
@@ -117,17 +117,36 @@ def test_stall_reprompts_without_leaving_wait_child():
     assert said, "촉진 발화가 나가지 않았다"
     assert TIMER_STALL in [t.name for t in kinds(tr.effects, StartTimer)]
 
-    # 정체 안전망 — 변화 구동 감시가 스스로 못 깨어날 때를 대비해 무조건 한 번 본다.
-    assert len(kinds(tr.effects, ForceWatchCheck)) == 1
+    # 정체 안전망(ForceWatchCheck)은 더 이상 촉진 발화와 묶여 있지 않다 —
+    # TIMER_FORCE_CHECK 가 독립 주기로 따로 돈다(아래 test_force_check_timer_*).
+    assert kinds(tr.effects, ForceWatchCheck) == []
 
 
-def test_every_stall_forces_a_watch_check_not_just_saturated_ones():
-    """상한 도달 여부와 무관하게 매 정체마다 안전망이 걸려야 한다."""
+def test_wait_child_arms_a_separate_force_check_timer():
+    """정체 안전망은 촉진 타이머와 분리된 자신만의 주기를 쓴다(2026-08-26)."""
+    _, effects = start()
+    timers = {t.name: t.ms for t in kinds(effects, StartTimer)}
+    assert TIMER_STALL in timers and TIMER_FORCE_CHECK in timers
+    assert timers[TIMER_FORCE_CHECK] == SC.force_check_interval_ms
+    assert timers[TIMER_FORCE_CHECK] != timers[TIMER_STALL], \
+        "분리됐다면 두 주기가 같은 값일 이유가 없다 (지금 설정: force=5s, stall=10s)"
+
+
+def test_force_check_timer_fires_silently_and_reschedules_itself():
+    """말은 안 걸고 ForceWatchCheck 만 내며, WAIT_CHILD 에 머무는 동안 스스로 다시 건다."""
     state, _ = start()
-    for _ in range(3):
-        tr = step(state, ev.Timeout(timer=TIMER_STALL))
-        state = tr.state
-        assert len(kinds(tr.effects, ForceWatchCheck)) == 1
+    tr = step(state, ev.Timeout(timer=TIMER_FORCE_CHECK), t=SC.force_check_interval_ms)
+    assert tr.state.phase is Phase.WAIT_CHILD
+    assert len(kinds(tr.effects, ForceWatchCheck)) == 1
+    assert kinds(tr.effects, Broadcast) == [], "정체 안전망은 아동에게 말을 걸지 않는다"
+    refired = [t for t in kinds(tr.effects, StartTimer) if t.name == TIMER_FORCE_CHECK]
+    assert len(refired) == 1 and refired[0].ms == SC.force_check_interval_ms
+
+
+def test_force_check_timer_is_cancelled_on_leaving_wait_child():
+    state, _ = start()
+    tr = step(state, ev.ChildPlaced())          # WAIT_CHILD -> JUDGE
+    assert TIMER_FORCE_CHECK in [c.name for c in kinds(tr.effects, CancelTimer)]
 
 
 def test_repeated_stalls_climb_the_prompt_ladder_and_stop_at_model():

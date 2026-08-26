@@ -33,6 +33,7 @@ TIMER_JUDGE = "judge"
 TIMER_ROBOT = "robot"
 TIMER_VERIFY = "verify"
 TIMER_STALL = "stall"
+TIMER_FORCE_CHECK = "force_check"
 
 #: 촉진 위계가 상한에 닿은 뒤 이만큼 더 정체하면 운영자를 부른다.
 STALL_ALERT_AFTER = 3
@@ -164,9 +165,10 @@ def _enter(state: SessionState, scenario: Scenario, phase: Phase, now_ms: int) -
     state = replace(state, phase=phase)
     effects: list[Effect] = []
 
-    # WAIT_CHILD 를 떠나면 정체 타이머는 의미가 없다.
+    # WAIT_CHILD 를 떠나면 정체 타이머·정체 안전망 모두 의미가 없다.
     if was_waiting and phase is not Phase.WAIT_CHILD:
         effects.append(CancelTimer(TIMER_STALL))
+        effects.append(CancelTimer(TIMER_FORCE_CHECK))
 
     # 감시 모드는 상태와 함께 움직인다. 바뀔 때만 명령을 낸다.
     mode = _watch_for(phase)
@@ -206,6 +208,8 @@ def _enter(state: SessionState, scenario: Scenario, phase: Phase, now_ms: int) -
         state = replace(state, request_at_ms=now_ms, placed_at_ms=0)
         # 아무것도 하지 않고 멈춰 있으면 변화 구동 감시는 영영 깨어나지 않는다.
         effects.append(StartTimer(TIMER_STALL, scenario.stall_timeout_ms))
+        # 정체 안전망은 촉진 발화와 별도 주기로 조용히 돈다 (§C-3, 2026-08-26 분리).
+        effects.append(StartTimer(TIMER_FORCE_CHECK, scenario.force_check_interval_ms))
 
     if phase is Phase.JUDGE:
         # thinking 을 '즉시' 표시해 판정 지연의 공백을 메운다 (§4.5).
@@ -398,6 +402,15 @@ def handle(
 
     if state.phase is Phase.WAIT_CHILD and t == "timeout" and event.timer == TIMER_STALL:
         return _handle_stall(state, scenario, now_ms)
+
+    if state.phase is Phase.WAIT_CHILD and t == "timeout" and event.timer == TIMER_FORCE_CHECK:
+        # 촉진 발화(_handle_stall)와 분리된 안전망 — 말은 안 걸고 감시만 조용히
+        # 다시 깨운다. 주기적으로 스스로를 다시 건다(WAIT_CHILD 에 머무는 동안).
+        return Transition(state, [
+            ForceWatchCheck(),
+            Log("force_watch_check", {}),
+            StartTimer(TIMER_FORCE_CHECK, scenario.force_check_interval_ms),
+        ])
 
     if state.phase is Phase.JUDGE and t in ("judge", "judge_override"):
         return _resolve_judge(state, event, scenario, now_ms)
@@ -627,11 +640,10 @@ def _handle_stall(state: SessionState, scenario: Scenario, now_ms: int) -> Trans
     state = replace(state, stall_count=stalls)
     tr = _reprompt(state, scenario, level, "stall", now_ms)
 
-    # 변화 구동 감시는 변화가 없으면 스스로 깨어나지 않는다 — 아이가 물건을 아주
-    # 조심스럽게 놓아 프레임 차분 임계값을 못 넘기면 영영 무반응일 수 있다(실측:
-    # 2026-08-26 세션 로그, 성공한 판정 다수가 이 정체를 최소 1회 거쳤다). 임계값은
-    # 건드리지 않고, 촉진마다 감시더러 무조건 한 번 보라고 안전망을 얹는다.
-    tr = Transition(tr.state, tr.effects + [ForceWatchCheck()])
+    # 변화 구동 감시가 스스로 못 깨어나는 문제(아이가 물건을 아주 조심스럽게 놓아
+    # 프레임 차분 임계값을 못 넘기는 경우)의 안전망은 더 이상 여기 없다 —
+    # TIMER_FORCE_CHECK 가 독립 주기로 따로 돈다(2026-08-26, `force_check_interval_ms`).
+    # 촉진 발화가 아동에게 말을 거는 빈도와 카메라를 다시 보는 빈도를 갈라 둔 것이다.
 
     # 촉진은 상한 없이 반복된다 — "실패로 끝나는 경로는 만들지 않는다" 는 설계다.
     # 그렇다고 조용히 반복만 하면 아동은 막혀 있는데 **아무도 모른다.** 위계가 상한에

@@ -20,6 +20,7 @@
   "judge_timeout_ms": 15000,
   "verify_timeout_ms": 20000,
   "stall_timeout_ms": 10000,
+  "force_check_interval_ms": 5000,
   "objects": {
     "flower": {
       "ko": "꽃 장난감",

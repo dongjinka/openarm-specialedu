@@ -54,6 +54,11 @@ class Scenario:
     verify_timeout_ms: int = 20_000
     #: WAIT_CHILD 에서 이만큼 아무 변화가 없으면 촉진 발화를 다시 낸다 (§C-3).
     stall_timeout_ms: int = 20_000
+    #: WAIT_CHILD 에서 이 주기로 감시더러 무조건 한 번 보라고 시킨다 (ForceWatchCheck,
+    #: §C-3 정체 안전망). `stall_timeout_ms` 와 **의도적으로 분리**돼 있다 — 촉진 발화는
+    #: 아동에게 말을 거는 것이라 너무 잦으면 성가시지만, 카메라 확인은 조용히 도는
+    #: 안전망이라 더 짧아도 된다. 2026-08-26 사용자 요청으로 분리.
+    force_check_interval_ms: int = 5_000
     #: 로봇 턴의 하위 단계. (진행비율 상한, 단계 id) 오름차순.
     #:
     #: 60에피소드의 그리퍼 채널에서 뽑았다 — 왼쪽은 가방을, 오른쪽은 물건을 잡는다.
@@ -117,6 +122,7 @@ def load_scenario(path: str | Path) -> Scenario:
         judge_timeout_ms=int(data.get("judge_timeout_ms", 15_000)),
         verify_timeout_ms=int(data.get("verify_timeout_ms", 20_000)),
         stall_timeout_ms=int(data.get("stall_timeout_ms", 20_000)),
+        force_check_interval_ms=int(data.get("force_check_interval_ms", 5_000)),
         turn_phases=tuple(
             (float(x["until"]), str(x["id"])) for x in data.get("turn_phases", ())
         ),
