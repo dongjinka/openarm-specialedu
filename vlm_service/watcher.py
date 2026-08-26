@@ -198,6 +198,25 @@ class ZoneWatcher:
         else:
             await self._evaluate(data=data, fingerprint=current)
 
+    # ── 정체 안전망 ──────────────────────────────────────────────────────
+    async def force_check(self) -> None:
+        """오케스트레이터가 20초째 변화를 못 봤을 때 부른다 (정체 촉진과 짝).
+
+        변화 구동 감시는 **정의상** 변화가 없으면 절대 스스로 깨어나지 않는다 —
+        임계값(`MOTION_THRESHOLD`)은 데이터셋 실측으로 신중히 잡은 값이라, 아이가
+        아주 조심스럽게/작게 물건을 놓아 그 임계값을 못 넘기면 감시가 영영 무반응이다.
+        여기서는 그 임계값을 건드리지 않고, 시간 기반 안전망만 하나 얹는다 — 무조건
+        한 번 확인한다(`_evaluate()` 는 무장 직후 1회 확인과 같은 경로).
+
+        `judge` 모드에서만 의미가 있다. `guard`(로봇 턴 중 경고만) 나 `off` 에서
+        불려도 조용히 무시한다 — 안 그러면 로봇 턴 중에 VLM 을 부르는 경로가 생긴다.
+        """
+        if self.mode != "judge":
+            return
+        self._moved = False
+        self._still = 0
+        await self._evaluate()
+
     # ── 모드별 동작 ──────────────────────────────────────────────────────
     async def _alert(self) -> None:
         if self._alerted:

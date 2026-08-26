@@ -16,6 +16,7 @@ from orchestrator.effects import (
     Broadcast,
     CancelTimer,
     Effect,
+    ForceWatchCheck,
     Log,
     RequestJudge,
     RequestVerify,
@@ -596,6 +597,12 @@ def _handle_stall(state: SessionState, scenario: Scenario, now_ms: int) -> Trans
     level = _prompt_level_for(state.retry + stalls, scenario)
     state = replace(state, stall_count=stalls)
     tr = _reprompt(state, scenario, level, "stall", now_ms)
+
+    # 변화 구동 감시는 변화가 없으면 스스로 깨어나지 않는다 — 아이가 물건을 아주
+    # 조심스럽게 놓아 프레임 차분 임계값을 못 넘기면 영영 무반응일 수 있다(실측:
+    # 2026-08-26 세션 로그, 성공한 판정 다수가 이 정체를 최소 1회 거쳤다). 임계값은
+    # 건드리지 않고, 촉진마다 감시더러 무조건 한 번 보라고 안전망을 얹는다.
+    tr = Transition(tr.state, tr.effects + [ForceWatchCheck()])
 
     # 촉진은 상한 없이 반복된다 — "실패로 끝나는 경로는 만들지 않는다" 는 설계다.
     # 그렇다고 조용히 반복만 하면 아동은 막혀 있는데 **아무도 모른다.** 위계가 상한에

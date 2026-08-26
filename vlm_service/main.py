@@ -2,8 +2,8 @@
 
 **소켓을 두 개 연다.** 한 프로세스지만 역할이 둘이기 때문이다.
 
-    /ws/vlm      judge_request · verify_request  →  judge · verify_result
-    /ws/capture  set_watch                       →  child_placed · zone_disturbed
+    /ws/vlm      judge_request · verify_request        →  judge · verify_result
+    /ws/capture  set_watch · force_watch_check         →  child_placed · zone_disturbed
 
 역할을 합치지 않는 이유: `child_placed` 는 `capture` 만 낼 수 있다 (ALLOWED_SENDERS).
 판정을 내는 쪽(`vlm`)과 판정을 **트리거하는** 쪽(`capture`)을 타입으로 갈라두면,
@@ -87,6 +87,9 @@ class VlmService:
         if msg.get("type") == "set_watch":
             if self.watch_enabled:
                 self.watcher.set_mode(msg.get("mode", "off"))
+        elif msg.get("type") == "force_watch_check":
+            if self.watch_enabled:
+                await self.watcher.force_check()
 
     async def _perceive_for_watch(self, image: bytes) -> dict | None:
         """안정된 프레임 1장 → 판정. 배치면이 비었으면 None (아이가 치운 것)."""

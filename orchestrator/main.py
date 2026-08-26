@@ -26,6 +26,7 @@ from orchestrator import events as ev
 from orchestrator.effects import (
     Broadcast,
     CancelTimer,
+    ForceWatchCheck,
     Log,
     RequestJudge,
     RequestVerify,
@@ -114,6 +115,10 @@ class Orchestrator:
                         (ev.Role.CAPTURE, ev.Role.OPERATOR),
                         {"type": "set_watch", "mode": eff.mode},
                     )
+                case ForceWatchCheck():
+                    # 정체 안전망. 상태가 아니라 1회성 지시라 운영자 콘솔에는 안 보낸다 —
+                    # SetWatch 처럼 표시할 "현재 모드" 가 없다.
+                    await self.hub.send((ev.Role.CAPTURE,), {"type": "force_watch_check"})
                 case SetListen():
                     # 마이크 창은 voice 가 연다. 운영자 콘솔도 상태를 같이 본다.
                     await self.hub.send(

@@ -133,6 +133,30 @@ async def test_guard_mode_never_calls_the_model_and_alerts_once():
 
 
 @pytest.mark.asyncio
+async def test_force_check_calls_the_model_even_with_no_detected_motion():
+    """정체 안전망. 아이가 아주 조심스럽게 놓아 프레임 차분이 임계값을 못 넘겨도,
+    force_check() 는 변화 감지 없이 무조건 한 번 판정한다."""
+    rec = Recorder({OBJECT: JUDGED})
+    w = ZoneWatcher(Frames([OBJECT] * 5), rec.judge, rec.emit)
+    w.mode = "judge"
+    # 틱을 하나도 안 돌렸다 — _moved 는 여전히 False, 정상 경로로는 절대 안 부른다.
+    await w.force_check()
+    assert rec.calls.count(OBJECT) == 1
+    assert rec.types.count("child_placed") == 1
+
+
+@pytest.mark.asyncio
+async def test_force_check_is_a_noop_outside_judge_mode():
+    """guard(로봇 턴 중) 나 off 에서 잘못 불려도 VLM 을 부르면 안 된다."""
+    for mode in ("guard", "off"):
+        rec = Recorder({OBJECT: JUDGED})
+        w = ZoneWatcher(Frames([OBJECT] * 5), rec.judge, rec.emit)
+        w.mode = mode
+        await w.force_check()
+        assert rec.calls == [], f"{mode} 모드에서 force_check 가 VLM 을 불렀다"
+
+
+@pytest.mark.asyncio
 async def test_cache_answers_a_following_judge_request():
     seq = [EMPTY, EMPTY, OBJECT] + [OBJECT] * 10
     rec, w = await run(seq, {OBJECT: JUDGED, EMPTY: None})

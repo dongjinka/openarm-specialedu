@@ -8,7 +8,7 @@
 from __future__ import annotations
 
 from orchestrator import events as ev
-from orchestrator.effects import Broadcast, CancelTimer, Log, SetWatch, StartTimer
+from orchestrator.effects import Broadcast, CancelTimer, ForceWatchCheck, Log, SetWatch, StartTimer
 from orchestrator.machine import TIMER_STALL, SessionState, handle
 from orchestrator.scenario import find_scenario
 from orchestrator.states import Phase
@@ -116,6 +116,18 @@ def test_stall_reprompts_without_leaving_wait_child():
     said = [b for b in kinds(tr.effects, Broadcast) if b.payload.get("utterance_id")]
     assert said, "촉진 발화가 나가지 않았다"
     assert TIMER_STALL in [t.name for t in kinds(tr.effects, StartTimer)]
+
+    # 정체 안전망 — 변화 구동 감시가 스스로 못 깨어날 때를 대비해 무조건 한 번 본다.
+    assert len(kinds(tr.effects, ForceWatchCheck)) == 1
+
+
+def test_every_stall_forces_a_watch_check_not_just_saturated_ones():
+    """상한 도달 여부와 무관하게 매 정체마다 안전망이 걸려야 한다."""
+    state, _ = start()
+    for _ in range(3):
+        tr = step(state, ev.Timeout(timer=TIMER_STALL))
+        state = tr.state
+        assert len(kinds(tr.effects, ForceWatchCheck)) == 1
 
 
 def test_repeated_stalls_climb_the_prompt_ladder_and_stop_at_model():

@@ -64,6 +64,17 @@ class SetWatch:
 
 
 @dataclass(frozen=True)
+class ForceWatchCheck:
+    """정체 안전망 — WAIT_CHILD 가 오래 조용하면 감시더러 무조건 한 번 보라고 한다.
+
+    변화 구동 감시(`ZoneWatcher`)는 변화가 없으면 절대 스스로 깨어나지 않는다.
+    `MOTION_THRESHOLD` 를 낮추는 건 위험하다(실측으로 신중히 잡은 값이라 반대
+    방향 오류 — 진짜 정지를 움직임으로 오인 — 를 부를 수 있다). 그 값은 그대로
+    두고, 정체 타이머가 이미 도는 WAIT_CHILD 에 시간 기반 안전망만 하나 얹는다.
+    """
+
+
+@dataclass(frozen=True)
 class SetListen:
     """마이크 창. 상태 머신이 명령하고 voice 스포크가 따른다.
 
@@ -97,5 +108,5 @@ class CancelTimer:
     name: str
 
 
-Effect = (Broadcast | SendRobot | RequestJudge | RequestVerify | SetWatch | SetListen
-          | Log | StartTimer | CancelTimer)
+Effect = (Broadcast | SendRobot | RequestJudge | RequestVerify | SetWatch | ForceWatchCheck
+          | SetListen | Log | StartTimer | CancelTimer)
