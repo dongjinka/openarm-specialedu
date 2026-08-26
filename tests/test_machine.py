@@ -245,19 +245,36 @@ def test_verify_timeout_fails_safe():
     assert tr.state.phase is Phase.ROBOT_FAIL
 
 
-def test_verify_hold_in_bag_then_timeout_succeeds_optimistically():
-    """가방이 팔에 가려 bag_closed 를 못 봤지만 object_in_bag=True 는 알려졌던 경우.
+def test_verify_hold_in_bag_resolves_immediately_not_after_20s():
+    """가방이 팔에 가려 bag_closed 를 못 봤지만 object_in_bag=True 는 알려진 경우.
 
-    타임아웃은 어차피 가방 상태를 모른 채로 진행한다 — 실패로 안내할 이유가 없다.
+    vlm_service 는 hold 한 번 보내고 그 cmd_id 를 다시 폴링하지 않으므로
+    (`_verify()`), TIMER_VERIFY 만료까지 기다려 봤자 더 나은 정보가 오지 않는다.
+    그런데도 기다리면 "성공했는데 한참 있다 다음으로 넘어간다" 는 불만이 남는다 —
+    verify_hold 를 받는 즉시 낙관적으로 끝낸다.
     """
     s = reach_robot_turn()
     s, _ = drive(s, [ev.RobotDone(cmd_id="c1", success=True,
                                   reason=ev.DoneReason.VERIFIED, duration_ms=30800)])
-    s, _ = drive(s, [ev.VerifyHold(cmd_id="c1", object_in_bag=True, confidence=0.95,
-                                   reason="backpack opening occluded")])
-    assert s.last_verify_in_bag is True
+    tr = step(s, ev.VerifyHold(cmd_id="c1", object_in_bag=True, confidence=0.95,
+                               reason="backpack opening occluded"))
+    assert tr.state.phase is Phase.REQUEST      # NEXT 를 지나 다음 항목으로, 타임아웃 없이
+    assert tr.state.packed == ("flower",)
+    assert tr.state.pending_cmd_id is None
+    assert tr.state.bag_ok is True
+    assert any(isinstance(e, CancelTimer) and e.name == "verify" for e in tr.effects)
+
+
+def test_verify_timeout_still_optimistic_if_hold_flag_set_without_resolving():
+    """last_verify_in_bag=True 인데 아직 ROBOT_VERIFY 에 머물러 있다면(방어적 경로),
+    타임아웃도 같은 낙관적 성공으로 마감한다 — verify_hold 의 즉시 해소 분기가
+    유일한 진입점이 아니게 되더라도 안전망이 남아 있다."""
+    s = reach_robot_turn()
+    s, _ = drive(s, [ev.RobotDone(cmd_id="c1", success=True,
+                                  reason=ev.DoneReason.VERIFIED, duration_ms=30800)])
+    s = replace(s, last_verify_in_bag=True)
     tr = step(s, ev.Timeout(timer="verify"))
-    assert tr.state.phase is Phase.REQUEST      # NEXT 를 지나 다음 항목으로
+    assert tr.state.phase is Phase.REQUEST
     assert tr.state.packed == ("flower",)
     assert tr.state.pending_cmd_id is None
     assert tr.state.bag_ok is True

@@ -448,30 +448,26 @@ def handle(
         if t == "verify_result":
             return _resolve_verify(state, event, scenario, now_ms)
         if t == "verify_hold":
-            # bag_closed 는 아직 모른다 — 기록만 해 두고 TIMER_VERIFY 는 그대로
-            # 돌린다. 운영자가 v/vf 로 확정하면 여기서 끝나고, 아무도 안 누르면
-            # 아래 timeout 분기가 이 값을 근거로 스스로 판단한다.
-            return Transition(replace(state, last_verify_in_bag=event.object_in_bag), [
+            state = replace(state, last_verify_in_bag=event.object_in_bag)
+            log_effects = [
                 Log("verify_hold", {"cmd_id": event.cmd_id, "object_in_bag": event.object_in_bag,
                                     "confidence": event.confidence, "reason": event.reason}),
                 Broadcast({"type": "operator_attention", "reason": "verify_hold",
                           "object_in_bag": event.object_in_bag, "detail": event.reason},
                          roles=(ev.Role.OPERATOR,)),
-            ])
+            ]
+            if event.object_in_bag:
+                # vlm_service 는 hold 한 번 보내고 그 cmd_id 를 다시 폴링하지 않는다
+                # (`_verify()`) — 즉 나중에 더 나은 verify_result 가 따로 올 일이
+                # 없다. TIMER_VERIFY 가 만료될 때까지 기다려 봤자 얻는 정보가
+                # 없으므로, 물건이 들어간 게 이미 확인된 지금 바로 낙관적으로
+                # 진행한다. 이게 "성공했는데도 한참 기다리다 다음으로 넘어간다"
+                # 는 불만의 실제 원인이었다 — verify_timeout 분기의 20초 대기.
+                return _optimistic_verify_success(state, scenario, now_ms, log_effects)
+            return Transition(state, log_effects)
         if t == "timeout" and event.timer == TIMER_VERIFY:
             if state.last_verify_in_bag:
-                # 가방이 팔에 가려 bag_closed 만 못 봤을 뿐, 물건이 들어간 것은
-                # 이미 확인됐다. 실패로 안내하지 않고 낙관적으로 성공 처리한다 —
-                # 어차피 이 경로는 원래도 가방 상태를 모른 채로 다음 턴에 진행했다
-                # (ROBOT_FAIL → NEXT), 그러니 안전성 손해 없이 거짓 실패 발화만
-                # 없앤다. 오늘 밤 관측된 모든 hold 케이스가 in_bag=True 였다
-                # (실물 로그 2026-08-26 확인).
-                cmd_id = state.pending_cmd_id
-                state = replace(state, pending_cmd_id=None, pending_object=None, bag_ok=True)
-                tr = _enter(state, scenario, Phase.NEXT, now_ms)
-                return Transition(tr.state, [Log("verify_timeout", {
-                    "cmd_id": cmd_id, "resolved": "optimistic_success",
-                    "last_verify_in_bag": True})] + tr.effects)
+                return _optimistic_verify_success(state, scenario, now_ms, [])
             tr = _enter(state, scenario, Phase.ROBOT_FAIL, now_ms)
             return Transition(tr.state, [Log("verify_timeout", {
                 "cmd_id": state.pending_cmd_id, "resolved": "fail",
@@ -537,6 +533,23 @@ def _resolve_judge(
 
     tr = _enter(state, scenario, nxt, now_ms)
     return Transition(tr.state, effects + tr.effects)
+
+
+def _optimistic_verify_success(
+    state: SessionState, scenario: Scenario, now_ms: int, extra_effects: list[Effect]
+) -> Transition:
+    """bag_closed 는 모르지만 object_in_bag=True 는 확인된 턴을 성공으로 마감한다.
+
+    `verify_hold(object_in_bag=True)` 직후(더 기다려도 얻을 정보가 없다) 또는
+    `TIMER_VERIFY` 만료 시(아무도 v/vf 로 확정하지 않았다) 양쪽에서 부른다.
+    `_resolve_verify` 의 `ok=True` 분기와 같은 곳(Phase.NEXT)으로 보낸다 —
+    `packed` 는 이미 판정 시점에 반영돼 있으므로 여기서 건드리지 않는다.
+    """
+    cmd_id = state.pending_cmd_id
+    state = replace(state, pending_cmd_id=None, pending_object=None, bag_ok=True)
+    tr = _enter(state, scenario, Phase.NEXT, now_ms)
+    log = Log("verify_optimistic_success", {"cmd_id": cmd_id})
+    return Transition(tr.state, extra_effects + [CancelTimer(TIMER_VERIFY), log] + tr.effects)
 
 
 def _resolve_verify(
